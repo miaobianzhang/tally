@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Tally",
+    "slug": "tally",
+    "scheme": "tally",
+    "version": "0.10.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.tally.app",
+      "versionCode": 10,
+      "adaptiveIcon": {
+        "backgroundColor": "#f9f9f7",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f9f9f7"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "efaae9c7-7154-4e50-b284-88c786af5685"
+      }
+    },
+    "owner": "miaobianzhang"
+  }
+}

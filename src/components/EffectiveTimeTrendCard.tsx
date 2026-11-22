@@ -1,7 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { TrendBucket } from '../utils/analytics';
 import type { Granularity } from '../utils/dateRange';
 import { TrendLineChart } from './TrendLineChart';
@@ -10,16 +13,20 @@ interface EffectiveTimeTrendCardProps {
   buckets: TrendBucket[];
   maxMs: number;
   granularity: Granularity;
+  focusLabel?: string;
 }
 
 export function EffectiveTimeTrendCard({
   buckets,
   maxMs,
   granularity,
+  focusLabel = '学习 + 工作',
 }: EffectiveTimeTrendCardProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const hint = `${
     granularity === 'week' ? '每周' : '每天'
-  }学习+工作 与 全部活动；黑字为学习+工作，灰字为全部活动${
+  }${focusLabel} 与 全部活动；黑字为${focusLabel}，灰字为全部活动${
     buckets.length > 14 ? '；长区间仅标注采样点' : ''
   }`;
 
@@ -28,12 +35,16 @@ export function EffectiveTimeTrendCard({
       <Text style={styles.title}>有效时间趋势</Text>
       <Text style={styles.hint}>{hint}</Text>
       <View style={styles.chart}>
-        <TrendLineChart buckets={buckets} maxMs={maxMs} />
+        <TrendLineChart
+          buckets={buckets}
+          maxMs={maxMs}
+          focusLabel={focusLabel}
+        />
       </View>
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={styles.studyWorkKey} />
-          <Text style={styles.legendText}>学习 + 工作</Text>
+          <Text style={styles.legendText}>{focusLabel}</Text>
         </View>
         <View style={styles.legendItem}>
           <Svg width={16} height={6}>
@@ -55,7 +66,7 @@ export function EffectiveTimeTrendCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     padding: spacing.lg,
     borderRadius: radius.lg,

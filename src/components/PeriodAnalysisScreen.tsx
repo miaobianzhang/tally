@@ -10,18 +10,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CATEGORIES } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
 import { useDayKey } from '../hooks/useDayKey';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   buildBreakdown,
   buildTrendAnalysis,
+  focusLabel,
   type TrendBucket,
 } from '../utils/analytics';
 import {
   addDays,
-  buildBuckets,
+  buildDailyBuckets,
   formatRangeLabel,
   isCurrentPeriodSelection,
   resolveSelection,
@@ -34,11 +38,10 @@ import {
 } from '../utils/time';
 import { BucketDetailSheet } from './BucketDetailSheet';
 import { CategoryDistributionCard } from './CategoryDistributionCard';
-import { EffectiveTimeTrendCard } from './EffectiveTimeTrendCard';
+import { DailyAnalysisCharts } from './DailyAnalysisCharts';
 import { OverviewStats } from './OverviewStats';
 import { PeriodSwitcher } from './PeriodSwitcher';
 import { RangePickerSheet } from './RangePickerSheet';
-import { StackedBarChart } from './StackedBarChart';
 
 export type PeriodAnalysisMode = 'month' | 'custom';
 
@@ -74,7 +77,10 @@ function initialSelection(
 export function PeriodAnalysisScreen({
   mode,
 }: PeriodAnalysisScreenProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { hydrated, sessions, timer } = useTally();
+  const { lookup } = useCategories();
   const now = useDayKey();
   const [selection, setSelection] = useState<RangeSelection>(() =>
     initialSelection(mode, dayStart(now)),
@@ -88,14 +94,14 @@ export function PeriodAnalysisScreen({
     () => resolveSelection(selection, nowDay),
     [selection, nowDay],
   );
-  const buckets = useMemo(() => buildBuckets(range), [range]);
+  const buckets = useMemo(() => buildDailyBuckets(range), [range]);
   const trend = useMemo(
-    () => buildTrendAnalysis(sessions, range, buckets),
-    [sessions, range, buckets],
+    () => buildTrendAnalysis(sessions, range, buckets, lookup),
+    [sessions, range, buckets, lookup],
   );
   const breakdown = useMemo(
-    () => buildBreakdown(sessions, range),
-    [sessions, range],
+    () => buildBreakdown(sessions, range, lookup),
+    [sessions, range, lookup],
   );
   const maxMs = useMemo(
     () =>
@@ -108,7 +114,6 @@ export function PeriodAnalysisScreen({
 
   const isRunning = timer.status === 'running';
   const hasData = trend.totalMs > 0 && buckets.length > 0;
-  const granularity = buckets[0]?.granularity ?? 'day';
   const currentPeriod = isCurrentPeriodSelection(selection, nowDay);
   const studyWorkPercent =
     trend.totalMs > 0
@@ -117,19 +122,10 @@ export function PeriodAnalysisScreen({
           trend.totalMs - trend.studyWorkMs,
         ])[0]
       : 0;
-  const bucketSummary = granularity === 'week' ? '按周汇总' : '按天';
   const rangeMeta =
     mode === 'month'
-      ? `${currentPeriod ? '本月至今' : '完整一月'} · ${bucketSummary}`
-      : bucketSummary;
-
-  const presentCategories = CATEGORIES.map((category, index) => ({
-    ...category,
-    ms: trend.buckets.reduce(
-      (sum, bucket) => sum + bucket.categoryMs[index],
-      0,
-    ),
-  })).filter((category) => category.ms > 0);
+      ? `${currentPeriod ? '本月至今' : '完整一月'} · 按天`
+      : `按天 · 共 ${buckets.length} 天`;
 
   const handleSelection = (next: RangeSelection) => {
     setSelectedBucket(null);
@@ -233,6 +229,7 @@ export function PeriodAnalysisScreen({
               totalMs={trend.totalMs}
               studyWorkMs={trend.studyWorkMs}
               studyWorkPercent={studyWorkPercent}
+              studyWorkLabel={focusLabel(lookup)}
               days={trend.days}
               dailyAverageMs={trend.dailyAverageMs}
             />
@@ -242,39 +239,10 @@ export function PeriodAnalysisScreen({
               totalMs={breakdown.totalMs}
             />
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>时间分布</Text>
-              <Text style={styles.cardHint}>
-                按分类堆叠 · 点击柱子查看活动明细
-              </Text>
-              <View style={styles.chart}>
-                <StackedBarChart
-                  buckets={trend.buckets}
-                  maxMs={maxMs}
-                  onSelectBucket={setSelectedBucket}
-                />
-              </View>
-              <View style={styles.swatches}>
-                {presentCategories.map((category) => (
-                  <View key={category.id} style={styles.swatch}>
-                    <View
-                      style={[
-                        styles.swatchDot,
-                        { backgroundColor: category.color },
-                      ]}
-                    />
-                    <Text style={styles.swatchText}>
-                      {category.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            <EffectiveTimeTrendCard
+            <DailyAnalysisCharts
               buckets={trend.buckets}
               maxMs={maxMs}
-              granularity={granularity}
+              onSelectBucket={setSelectedBucket}
             />
           </>
         )}
@@ -302,7 +270,7 @@ export function PeriodAnalysisScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.page,
@@ -329,7 +297,7 @@ const styles = StyleSheet.create({
   backIcon: {
     fontSize: 32,
     lineHeight: 34,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   headerSpacer: {
     width: 40,
@@ -338,7 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.2,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   periodControl: {
     marginBottom: spacing.sm,
@@ -386,11 +354,11 @@ const styles = StyleSheet.create({
   rangeLabel: {
     flex: 1,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.textSecondaryOnPage,
   },
   rangeMeta: {
     fontSize: 12,
-    color: colors.muted,
+    color: colors.mutedOnPage,
   },
   note: {
     flexDirection: 'row',

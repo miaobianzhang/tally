@@ -1,7 +1,8 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
 
 export function BottomTabs({
   state,
@@ -10,6 +11,7 @@ export function BottomTabs({
   navigateToTab,
   insets,
 }: BottomTabBarProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View
       style={[
@@ -64,7 +66,7 @@ export function BottomTabs({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: colors.surface,

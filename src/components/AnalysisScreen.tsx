@@ -11,10 +11,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDayKey } from '../hooks/useDayKey';
+import { useCategories } from '../hooks/useCategories';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   buildBreakdown,
+  focusLabel,
   type Breakdown,
 } from '../utils/analytics';
 import {
@@ -32,7 +37,10 @@ import { DonutChart } from './DonutChart';
 import { OverviewStats } from './OverviewStats';
 import { VerticalDayTimeline } from './VerticalDayTimeline';
 
-function accessibilitySummary(breakdown: Breakdown): string {
+function accessibilitySummary(
+  breakdown: Breakdown,
+  focusLabelText: string,
+): string {
   if (breakdown.categories.length === 0) {
     return '今天还没有时间记录。';
   }
@@ -50,25 +58,32 @@ function accessibilitySummary(breakdown: Breakdown): string {
     )
     .join('；');
 
-  return `今日时间分布。分类：${categories}。活动：${activities}。总计 ${formatDuration(breakdown.totalMs)}，学习和工作 ${formatDuration(breakdown.studyWorkMs)}。`;
+  return `今日时间分布。分类：${categories}。活动：${activities}。总计 ${formatDuration(breakdown.totalMs)}，${focusLabelText} ${formatDuration(breakdown.studyWorkMs)}。`;
 }
 
 export function AnalysisScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { hydrated, sessions, timer } = useTally();
+  const { lookup } = useCategories();
   const now = useDayKey();
   const rangeStart = dayStart(now);
   const rangeEnd = nextDayStart(now);
   const breakdown = useMemo(
-    () => buildBreakdown(sessions, { start: rangeStart, end: rangeEnd }),
-    [sessions, rangeStart, rangeEnd],
+    () => buildBreakdown(sessions, { start: rangeStart, end: rangeEnd }, lookup),
+    [sessions, rangeStart, rangeEnd, lookup],
   );
   const timelineDays = useMemo(
     () =>
-      buildTimelineDays(sessions, {
-        start: rangeStart,
-        end: rangeEnd,
-      }),
-    [sessions, rangeStart, rangeEnd],
+      buildTimelineDays(
+        sessions,
+        {
+          start: rangeStart,
+          end: rangeEnd,
+        },
+        lookup,
+      ),
+    [sessions, rangeStart, rangeEnd, lookup],
   );
   const [selection, setSelection] = useState<{
     day: number;
@@ -195,6 +210,7 @@ export function AnalysisScreen() {
               totalMs={breakdown.totalMs}
               studyWorkMs={breakdown.studyWorkMs}
               studyWorkPercent={studyWorkPercent}
+              studyWorkLabel={focusLabel(lookup)}
             />
 
             <View style={styles.chartBlock}>
@@ -206,7 +222,10 @@ export function AnalysisScreen() {
                 categories={breakdown.categories}
                 activities={breakdown.activities}
                 totalMs={breakdown.totalMs}
-                accessibilityLabel={accessibilitySummary(breakdown)}
+                accessibilityLabel={accessibilitySummary(
+                  breakdown,
+                  focusLabel(lookup),
+                )}
                 showDirectLabels
                 selectedActivityKey={selectedActivityKey}
                 onSelectActivity={toggleActivity}
@@ -232,7 +251,7 @@ export function AnalysisScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.page,
@@ -251,12 +270,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     letterSpacing: -0.5,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   date: {
     marginTop: 6,
     fontSize: 13,
-    color: colors.muted,
+    color: colors.mutedOnPage,
   },
   headerActions: {
     flexDirection: 'row',

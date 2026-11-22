@@ -11,11 +11,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDayKey } from '../hooks/useDayKey';
+import { useCategories } from '../hooks/useCategories';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   buildBreakdown,
   buildTrendAnalysis,
+  focusLabel,
 } from '../utils/analytics';
 import {
   buildBuckets,
@@ -41,7 +46,10 @@ function goBack() {
 }
 
 export function WeeklyScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { hydrated, sessions, timer } = useTally();
+  const { lookup } = useCategories();
   const now = useDayKey();
   const [selection, setSelection] = useState<RangeSelection>({
     kind: 'preset',
@@ -55,12 +63,12 @@ export function WeeklyScreen() {
   );
   const buckets = useMemo(() => buildBuckets(range), [range]);
   const trend = useMemo(
-    () => buildTrendAnalysis(sessions, range, buckets),
-    [sessions, range, buckets],
+    () => buildTrendAnalysis(sessions, range, buckets, lookup),
+    [sessions, range, buckets, lookup],
   );
   const breakdown = useMemo(
-    () => buildBreakdown(sessions, range),
-    [sessions, range],
+    () => buildBreakdown(sessions, range, lookup),
+    [sessions, range, lookup],
   );
   const maxMs = useMemo(
     () =>
@@ -71,8 +79,8 @@ export function WeeklyScreen() {
     [trend.buckets],
   );
   const days = useMemo(
-    () => buildTimelineDays(sessions, range),
-    [sessions, range],
+    () => buildTimelineDays(sessions, range, lookup),
+    [sessions, range, lookup],
   );
 
   const isRunning = timer.status === 'running';
@@ -164,6 +172,7 @@ export function WeeklyScreen() {
               totalMs={trend.totalMs}
               studyWorkMs={trend.studyWorkMs}
               studyWorkPercent={studyWorkPercent}
+              studyWorkLabel={focusLabel(lookup)}
               days={trend.days}
               dailyAverageMs={trend.dailyAverageMs}
             />
@@ -177,6 +186,7 @@ export function WeeklyScreen() {
               buckets={trend.buckets}
               maxMs={maxMs}
               granularity={granularity}
+              focusLabel={focusLabel(lookup)}
             />
 
             <View style={styles.card}>
@@ -200,7 +210,7 @@ export function WeeklyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.page,
@@ -227,7 +237,7 @@ const styles = StyleSheet.create({
   backIcon: {
     fontSize: 32,
     lineHeight: 34,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   headerSpacer: {
     width: 40,
@@ -236,7 +246,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.2,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   rangeHeader: {
     marginTop: spacing.lg,
@@ -249,11 +259,11 @@ const styles = StyleSheet.create({
   rangeLabel: {
     flex: 1,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.textSecondaryOnPage,
   },
   rangeMeta: {
     fontSize: 12,
-    color: colors.muted,
+    color: colors.mutedOnPage,
   },
   note: {
     flexDirection: 'row',

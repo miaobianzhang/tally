@@ -14,9 +14,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getCategory } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { CategoryId } from '../types';
 import { hapticNotificationSuccess } from '../utils/haptics';
 import type { TimelineDay, TimelineSegment } from '../utils/timeline';
@@ -57,7 +60,10 @@ function TimelineDetailContent({
   day,
   onClose,
 }: TimelineDetailContentProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { sessions, busy, updateSession } = useTally();
+  const { resolveCategory } = useCategories();
   const insets = useSafeAreaInsets();
   const session =
     sessions.find((item) => item.id === segment.sessionId) ?? null;
@@ -68,7 +74,7 @@ function TimelineDetailContent({
   const [activity, setActivity] = useState(currentActivity);
   const [category, setCategory] = useState<CategoryId>(currentCategory);
 
-  const categoryMeta = getCategory(
+  const categoryMeta = resolveCategory(
     editing ? category : currentCategory,
   );
   const canEdit = session !== null;
@@ -272,7 +278,7 @@ function TimelineDetailContent({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
   },

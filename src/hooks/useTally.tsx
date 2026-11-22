@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Alert, AppState } from 'react-native';
 
+import { useCategories } from './useCategories';
 import {
   appendSession,
   loadTally,
@@ -41,6 +42,7 @@ interface TallyContextValue {
     activity: string,
     category: CategoryId,
   ) => Promise<boolean>;
+  reload: () => Promise<void>;
 }
 
 const TallyContext = createContext<TallyContextValue | null>(null);
@@ -53,6 +55,11 @@ export function TallyProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [lastCategory, setLastCategory] = useState<CategoryId>('other');
   const [now, setNow] = useState(() => Date.now());
+  const {
+    hydrated: categoriesHydrated,
+    activeCategories,
+    ensureReferencedCategories,
+  } = useCategories();
 
   // Hydrate once. If storage is corrupt, loadTally falls back to safe defaults.
   useEffect(() => {
@@ -79,6 +86,25 @@ export function TallyProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  const effectiveLastCategory = useMemo(() => {
+    if (activeCategories.some((category) => category.id === lastCategory)) {
+      return lastCategory;
+    }
+    return activeCategories[0]?.id ?? lastCategory;
+  }, [activeCategories, lastCategory]);
+
+  useEffect(() => {
+    if (!hydrated || !categoriesHydrated) return;
+    void ensureReferencedCategories(
+      sessions.map((session) => session.category),
+    );
+  }, [
+    categoriesHydrated,
+    ensureReferencedCategories,
+    hydrated,
+    sessions,
+  ]);
 
   const runningStartedAt = timer.status === 'running' ? timer.startedAt : 0;
 
@@ -189,13 +215,15 @@ export function TallyProvider({ children }: { children: ReactNode }) {
       setBusy(true);
 
       const pending = timer;
+      const now = Date.now();
       const session: Session = {
         id: pending.id,
         activity: trimmed,
         category,
         startedAt: pending.startedAt,
         endedAt: pending.endedAt,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
       };
 
       try {
@@ -207,7 +235,7 @@ export function TallyProvider({ children }: { children: ReactNode }) {
         await saveTimer({ status: 'idle' });
         setTimer({ status: 'idle' });
         setLastCategory(category);
-        savePrefs({ lastCategory: category }).catch((error: unknown) => {
+        savePrefs({ lastCategory: category, updatedAt: now }).catch((error: unknown) => {
           console.warn('[tally] prefs save failed', error);
         });
         return true;
@@ -270,32 +298,43 @@ export function TallyProvider({ children }: { children: ReactNode }) {
     [hydrated],
   );
 
+  const reload = useCallback(async () => {
+    const loaded = await loadTally().catch(() => null);
+    if (!loaded) return;
+    setSessions(loaded.sessions);
+    setTimer(loaded.timer);
+    setLastCategory(loaded.prefs.lastCategory);
+    setNow(Date.now());
+  }, []);
+
   const value = useMemo<TallyContextValue>(
     () => ({
       hydrated,
       busy,
       timer,
       sessions,
-      lastCategory,
+      lastCategory: effectiveLastCategory,
       elapsedMs,
       start,
       stop,
       savePending,
       discardPending,
       updateSession,
+      reload,
     }),
     [
       hydrated,
       busy,
       timer,
       sessions,
-      lastCategory,
+      effectiveLastCategory,
       elapsedMs,
       start,
       stop,
       savePending,
       discardPending,
       updateSession,
+      reload,
     ],
   );
 

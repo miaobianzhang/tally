@@ -7,7 +7,9 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
-import { colors, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { spacing } from '../theme';
 import {
   DAY_LABEL_METRICS,
   DAY_TIMELINE,
@@ -43,6 +45,7 @@ export function VerticalDayTimeline({
   days,
   now,
 }: VerticalDayTimelineProps) {
+  const styles = useThemedStyles(createStyles);
   const [width, setWidth] = useState(0);
   const [selected, setSelected] = useState<SelectedSegment | null>(null);
   const day = days[0];
@@ -282,7 +285,7 @@ export function VerticalDayTimeline({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   hint: {
     marginTop: 4,
     marginBottom: spacing.md,

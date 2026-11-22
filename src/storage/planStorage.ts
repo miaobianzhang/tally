@@ -7,6 +7,7 @@ import {
   normalizePlanPrefs,
 } from '../utils/planValidation';
 import { STORAGE_KEYS } from './keys';
+import { recordPlanTombstone } from './tombstoneStorage';
 
 // Plans have their own queue so plan writes never interleave with sessions or
 // the timer. Each mutation is a serialized read-modify-write.
@@ -91,9 +92,16 @@ export function removePlanItem(id: string): Promise<PlanItem[]> {
         STORAGE_KEYS.plans,
         JSON.stringify(next),
       );
+      await recordPlanTombstone(id);
     }
     return next;
   });
+}
+
+export function replacePlanItems(items: PlanItem[]): Promise<void> {
+  return enqueue(() =>
+    AsyncStorage.setItem(STORAGE_KEYS.plans, JSON.stringify(items)),
+  );
 }
 
 export function savePlanPrefs(prefs: PlanPrefs): Promise<void> {

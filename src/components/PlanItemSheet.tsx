@@ -16,7 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PLAN_SECTION_LABELS } from '../constants/plans';
 import { usePlans } from '../hooks/usePlans';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type {
   CategoryId,
   PlanItem,
@@ -49,6 +52,8 @@ export function PlanItemSheet({
   now,
   onClose,
 }: PlanItemSheetProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { busy, addPlan, updatePlan, removePlan } = usePlans();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(plan?.title ?? '');
@@ -265,7 +270,7 @@ export function PlanItemSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
   },

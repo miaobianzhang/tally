@@ -1,5 +1,61 @@
 # Tally 开发日志
 
+## v0.11.0 — 2026-11-22
+
+**目标**：加入设置中心、可自定义分类、深色模式与关键配色、首页背景和本机个人资料；支持数据导出/导入与可选的坚果云加密同步；把月分析和长区间分析改成始终按天、可缩放且日期对齐的图表。
+
+### 新增
+
+- 首页左上角新增用户头像按钮，进入 `src/app/settings.tsx`；头像和用户名都可在本机修改。
+- 分类目录改为运行时数据：支持新增、改名、改色、停用/恢复；停用保留历史，内置六类也可停用。
+- 每个分类新增 `countsAsFocus`，趋势图实线改为按该标记汇总；「学习+工作」在自定义专注分类存在时显示为「专注时间」或分类名组合。
+- 新增主题系统：跟随系统/浅色/深色，页面、卡片、按钮强调色可自定义，文字/边框按对比度自动推导。
+- 新增首页背景：3 套渐变预设 + 相册照片 + 恢复默认；照片会压缩后保存在 App 文档目录。
+- 新增记录/计划/分类/偏好 JSON 备份、CSV 会话导出和 JSON 合并导入，使用系统分享/文件选择器。
+- 新增可选坚果云 WebDAV 同步：PBKDF2-SHA256（21 万次）+ AES-256-GCM 加密，应用密码/同步密钥存 SecureStore。
+- 新增计划删除墓碑 `@tally/tombstones/v1`，避免同步时已删除计划被另一台设备复活。
+- 新增 `DailyAnalysisCharts`：月分析/自定义分析始终按天，柱状图与趋势图共用一个横向滚动容器和日期刻度，支持 7/14/30/90 天缩放、回到最新、窗口虚拟化和点击某日查看明细。
+
+### 变更
+
+- `CategoryId` 从固定 union 放宽为字符串；会话、计划、计时预填和偏好中的旧分类 id 均可继续读取。
+- `buildBreakdown` / `buildTrendAnalysis` 改为接收运行时分类目录；`TrendBucket.categoryMs` 改为按分类 id 记录。
+- 29 个组件的静态 `StyleSheet.create` 改为 `createStyles(colors)` + `useThemedStyles`，主题切换会即时生效。
+- 月分析不再在第 14 天从日桶切换为周桶；`rangeMeta` 显示「按天 · 共 N 天」。
+- `formatAxisDuration` 修复 24h/32h 都显示 `1d` 的问题；长区间 Y 轴不再出现重复标签。
+- 设置页的云同步入口放在「数据」区块末尾，以小字状态呈现；注册链接只放在同步设置内部，不做首页登录 CTA。
+- 版本升级到 `0.11.0`，Android `versionCode` 升级到 11，`package-lock.json` 同步。
+
+### 技术说明
+
+- 主题颜色由 `buildThemeColors` 从浅色/深色基色 + 用户覆盖色推导，文字使用 WCAG 相对亮度选择黑/白，边框/次要文字与表面色混合。
+- 长区间趋势聚合改成「桶按 start 排序 + 二分查找首个重叠桶 + 沿重叠桶累加」，避免 sessions × 1,826 的双重循环。
+- 图表只渲染可视窗口 ± 一屏的日桶；折线路径保留全量（约 1,826 个点，只有 2 条 Path），标签/圆点只绘制窗口内。
+- 同步信封包含 `format/version/kdf/cipher/data`；PBKDF2 盐在首次连接时生成，派生密钥与盐存 SecureStore；WebDAV 使用 GET/PUT/MKCOL，PUT 带 `If-Match`，412 时重新拉取合并并重试一次。
+- 同步合并按 id 与会话 `updatedAt ?? createdAt` / 计划 `updatedAt` / 分类 `updatedAt` 取较新记录；计划墓碑优先于旧计划。
+- 头像/背景使用 `expo-image-manipulator` 压缩后由 `expo-file-system` 的 `File.copy` 保存；缺失文件会回退默认头像/背景。
+- 新增依赖：file-system、sharing、document-picker、image-picker、image-manipulator、linear-gradient、secure-store、crypto、system-ui、@noble/hashes、base64-js。
+
+### 已知限制
+
+- 同步端到端联调仍需要真实坚果云 WebDAV 应用密码；本轮未提交任何凭据。
+- 首次双端都有数据时当前直接合并（较新记录优先），没有提供「本机覆盖云端 / 云端覆盖本机」的强制覆盖向导。
+- 同步是记录级最后写入者胜出，无法做字符级冲突合并；忘记同步密码无法恢复云端数据。
+- 用户名和头像只保存在本机，不参与导出或同步。
+- 分类暂不支持拖拽排序或图标/emoji；停用代替硬删除。
+- 长区间缩放只有 7/14/30/90 天档位，不提供双指捏合；本轮未添加平均值虚线（用户已取消）。
+- 主题的页面/卡片/强调色可自由组合，但极端低对比颜色仍可能影响可读性；设置中使用自动黑/白文字和混合边框兜底。
+
+### 验证
+
+- 临时纯逻辑断言：分类迁移/去重/停用、`countsAsFocus` 汇总、28/31/365/1826 天日分桶、趋势聚合、`formatAxisDuration`、计划墓碑合并与合并幂等；全部通过。
+- `npx tsc --noEmit`：通过。
+- `npx expo lint`：通过。
+- `npx expo export --platform android`：成功生成 Hermes bundle。
+- `npx expo install --check`：依赖已对齐。
+- `npx expo-doctor`：20/20 通过。
+- EAS `preview` Android 构建完成：版本 `0.11.0` / `versionCode 11`，APK 97,723,320 字节（93.20 MiB），SHA-256 `7964FE40CA07F385C0D3A47F0CC0BFC1951ACAA23131E7EFFA23364DFD5AB44A`；已确认包含 `AndroidManifest.xml`、`classes.dex` 与 `lib/arm64-v8a/` 原生库。
+
 ## v0.10.0 — 2026-11-04
 
 **目标**：换成新的桌面图标；让今日饼图可以点选并联动下方活动信息；在周/月/自定义折线图的每个数据点旁直接标出数值；启动页保持纯色背景，不加自定义启动图。

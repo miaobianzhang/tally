@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   currentPeriodStart,
   formatMonthTitle,
@@ -29,6 +31,7 @@ export function PeriodSwitcher({
   onChange,
   futurePeriods = 0,
 }: PeriodSwitcherProps) {
+  const styles = useThemedStyles(createStyles);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const start =
@@ -121,7 +124,7 @@ export function PeriodSwitcher({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

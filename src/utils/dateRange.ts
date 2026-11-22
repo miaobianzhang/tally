@@ -342,6 +342,17 @@ export function eachDay(range: DateRange): number[] {
   return days;
 }
 
+/** Always one bucket per calendar day; used by month/custom analysis. */
+export function buildDailyBuckets(range: DateRange): Bucket[] {
+  return eachDay(range).map((day) => ({
+    start: day,
+    end: nextDayStart(day),
+    granularity: 'day' as const,
+    label: formatMonthDay(day),
+    fullLabel: formatFullDateWithYear(day),
+  }));
+}
+
 export function buildBuckets(range: DateRange): Bucket[] {
   const days = eachDay(range);
   if (days.length === 0) return [];

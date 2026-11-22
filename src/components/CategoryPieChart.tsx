@@ -1,4 +1,4 @@
-import { colors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
 import type { CategoryGroup } from '../utils/analytics';
 import { formatDuration, formatPercent } from '../utils/time';
 import { DonutChart } from './DonutChart';
@@ -28,6 +28,7 @@ export function CategoryPieChart({
   categories,
   totalMs,
 }: CategoryPieChartProps) {
+  const { colors } = useTheme();
   if (totalMs <= 0 || categories.length === 0) return null;
 
   return (

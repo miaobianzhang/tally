@@ -15,7 +15,12 @@ export function applySessionUpdate(
 
   return sessions.map((session, sessionIndex) =>
     sessionIndex === index
-      ? { ...session, activity: trimmed, category }
+      ? {
+          ...session,
+          activity: trimmed,
+          category,
+          updatedAt: Date.now(),
+        }
       : session,
   );
 }

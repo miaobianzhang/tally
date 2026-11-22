@@ -1,5 +1,5 @@
-import { getCategory } from '../constants/categories';
-import type { CategoryId, Session } from '../types';
+import { FALLBACK_CATEGORY } from '../constants/categories';
+import type { CategoryId, CategoryLookup, Session } from '../types';
 import {
   eachDay,
   formatMonthDay,
@@ -57,6 +57,7 @@ export function formatSegmentRange(
 export function buildTimelineDays(
   sessions: Session[],
   range: DateRange,
+  lookup: CategoryLookup,
 ): TimelineDay[] {
   const days = eachDay(range).map<TimelineDay>((start) => ({
     start,
@@ -76,7 +77,10 @@ export function buildTimelineDays(
       return;
     }
 
-    const category = getCategory(session.category);
+    const category = lookup.byId.get(session.category) ?? {
+      label: FALLBACK_CATEGORY.label,
+      color: FALLBACK_CATEGORY.color,
+    };
     const activity = normalizeActivityLabel(session.activity) || '未填写活动';
 
     days.forEach((day) => {

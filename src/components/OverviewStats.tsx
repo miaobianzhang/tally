@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import { formatDuration, formatPercent } from '../utils/time';
 
 interface OverviewStatsProps {
@@ -24,6 +26,7 @@ export function OverviewStats({
   totalLabel = '全部活动',
   studyWorkLabel = '学习 + 工作',
 }: OverviewStatsProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
@@ -68,7 +71,7 @@ export function OverviewStats({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     padding: spacing.lg,
     borderRadius: radius.lg,

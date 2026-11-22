@@ -1,6 +1,6 @@
 import { Circle, Path } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
 import {
   donutSlicePath,
   type DonutArc,
@@ -24,10 +24,12 @@ export function DonutRing({
   cy,
   outerRadius,
   innerRadius,
-  gapColor = colors.page,
+  gapColor,
   selectedKey = null,
   onSelect,
 }: DonutRingProps) {
+  const { colors } = useTheme();
+  const resolvedGapColor = gapColor ?? colors.page;
   if (arcs.length === 0) return null;
 
   if (arcs.length === 1) {
@@ -65,7 +67,7 @@ export function DonutRing({
           fillOpacity={
             selectedKey !== null && selectedKey !== arc.key ? 0.35 : 1
           }
-          stroke={gapColor}
+          stroke={resolvedGapColor}
           strokeWidth={2}
           onPress={onSelect ? () => onSelect(arc.key) : undefined}
         />

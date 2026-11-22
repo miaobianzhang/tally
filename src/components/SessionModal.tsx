@@ -16,7 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { CategoryId, TimerState } from '../types';
 import { formatClockTime, formatDuration } from '../utils/time';
 import { CategoryPicker } from './CategoryPicker';
@@ -69,6 +72,8 @@ function SessionSheet({
   initialActivity,
   initialCategory,
 }: SessionSheetProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { busy, savePending, discardPending } = useTally();
   const insets = useSafeAreaInsets();
   const [activity, setActivity] = useState(initialActivity);
@@ -196,7 +201,7 @@ function SessionSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
   },

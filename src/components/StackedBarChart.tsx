@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { G, Line, Path, Rect } from 'react-native-svg';
 
-import { CATEGORIES } from '../constants/categories';
-import { colors } from '../theme';
+import { FALLBACK_CATEGORY } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
 import type { TrendBucket } from '../utils/analytics';
 import {
   bucketCenterX,
@@ -23,6 +26,10 @@ export function StackedBarChart({
   maxMs,
   onSelectBucket,
 }: StackedBarChartProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const { lookup } = useCategories();
+
   return (
     <ChartFrame
       buckets={buckets}
@@ -64,8 +71,8 @@ export function StackedBarChart({
           {buckets.map((bucket, bucketIndex) => {
             if (bucket.totalMs <= 0 || yMaxMs <= 0) return null;
 
-            const visible = bucket.categoryMs
-              .map((ms, categoryIndex) => ({ ms, categoryIndex }))
+            const visible = Object.entries(bucket.categoryMs)
+              .map(([categoryId, ms]) => ({ ms, categoryId }))
               .filter((segment) => segment.ms > 0);
             const topPosition = visible.length - 1;
             const x =
@@ -84,11 +91,13 @@ export function StackedBarChart({
                     yMaxMs,
                   );
                   const height = Math.max(0, bottomY - topY);
-                  const color = CATEGORIES[segment.categoryIndex].color;
+                  const color =
+                    lookup.byId.get(segment.categoryId)?.color ??
+                    FALLBACK_CATEGORY.color;
 
                   return position === topPosition ? (
                     <Path
-                      key={segment.categoryIndex}
+                      key={segment.categoryId}
                       d={roundedTopBarPath(
                         x,
                         topY,
@@ -100,7 +109,7 @@ export function StackedBarChart({
                     />
                   ) : (
                     <Rect
-                      key={segment.categoryIndex}
+                      key={segment.categoryId}
                       x={x}
                       y={topY}
                       width={metrics.barWidth}
@@ -120,7 +129,7 @@ export function StackedBarChart({
 
                   return (
                     <Line
-                      key={`gap-${segment.categoryIndex}`}
+                      key={`gap-${segment.categoryId}`}
                       x1={x}
                       y1={boundaryY}
                       x2={x + metrics.barWidth}
@@ -139,7 +148,7 @@ export function StackedBarChart({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   marks: {
     position: 'absolute',
     left: 0,

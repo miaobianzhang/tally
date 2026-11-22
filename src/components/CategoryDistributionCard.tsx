@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { CategoryGroup } from '../utils/analytics';
 import { ActivityLegend } from './ActivityLegend';
 import { CategoryPieChart } from './CategoryPieChart';
@@ -14,6 +16,7 @@ export function CategoryDistributionCard({
   categories,
   totalMs,
 }: CategoryDistributionCardProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.card}>
       <Text style={styles.title}>分类分布</Text>
@@ -30,7 +33,7 @@ export function CategoryDistributionCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     padding: spacing.lg,
     borderRadius: radius.lg,

@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 
 import { useReduceMotion } from '../hooks/useReduceMotion';
-import { colors, radius } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius } from '../theme';
 import type { TimerState } from '../types';
 import {
   hapticImpactLight,
@@ -32,6 +35,8 @@ export function TimerButton({
   disabled,
   onPress,
 }: TimerButtonProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const reduceMotion = useReduceMotion();
   const isFocused = useIsFocused();
 
@@ -269,7 +274,7 @@ export function TimerButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   wrap: {
     position: 'relative',
     width: '100%',

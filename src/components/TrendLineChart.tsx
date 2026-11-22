@@ -6,7 +6,9 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
 import type { TrendBucket } from '../utils/analytics';
 import {
   bucketCenterX,
@@ -22,6 +24,7 @@ import { ChartFrame } from './ChartFrame';
 interface TrendLineChartProps {
   buckets: TrendBucket[];
   maxMs: number;
+  focusLabel?: string;
 }
 
 interface PointLabelProps {
@@ -33,6 +36,7 @@ interface PointLabelProps {
 }
 
 function PointLabel({ x, y, text, color, textAnchor }: PointLabelProps) {
+  const { colors } = useTheme();
   return (
     <>
       <SvgText
@@ -62,7 +66,13 @@ function PointLabel({ x, y, text, color, textAnchor }: PointLabelProps) {
   );
 }
 
-export function TrendLineChart({ buckets, maxMs }: TrendLineChartProps) {
+export function TrendLineChart({
+  buckets,
+  maxMs,
+  focusLabel = '学习 + 工作',
+}: TrendLineChartProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const totalMs = buckets.reduce((sum, bucket) => sum + bucket.totalMs, 0);
   const studyWorkMs = buckets.reduce(
     (sum, bucket) => sum + bucket.studyWorkMs,
@@ -180,7 +190,7 @@ export function TrendLineChart({ buckets, maxMs }: TrendLineChartProps) {
             <View
               accessible
               accessibilityRole="image"
-              accessibilityLabel={`有效时间趋势。学习与工作合计 ${formatDuration(studyWorkMs)}，全部活动合计 ${formatDuration(totalMs)}。`}
+              accessibilityLabel={`有效时间趋势。${focusLabel}合计 ${formatDuration(studyWorkMs)}，全部活动合计 ${formatDuration(totalMs)}。`}
               pointerEvents="none"
               style={StyleSheet.absoluteFill}
             />
@@ -191,7 +201,7 @@ export function TrendLineChart({ buckets, maxMs }: TrendLineChartProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   marks: {
     position: 'absolute',
     left: 0,

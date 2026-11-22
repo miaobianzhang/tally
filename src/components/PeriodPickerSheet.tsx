@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   addDays,
   buildWeeksForMonth,
@@ -70,6 +72,7 @@ function PeriodPickerContent({
   onClose,
   onApply,
 }: PeriodPickerContentProps) {
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   const currentStart = currentPeriodStart(mode, now);
   const floor =
@@ -386,7 +389,7 @@ function PeriodPickerContent({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   flex: {
     flex: 1,
     justifyContent: 'flex-end',

@@ -67,6 +67,7 @@ interface PlanContextValue {
     section: PlanSection,
     targetIndex: number,
   ) => Promise<boolean>;
+  reload: () => Promise<void>;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -266,7 +267,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       if (prefs[key] === visible) return true;
 
       const previous = prefs;
-      const next = { ...prefs, [key]: visible };
+      const next = {
+        ...prefs,
+        [key]: visible,
+        updatedAt: Date.now(),
+      };
       setPrefs(next);
       busyRef.current = true;
       setBusy(true);
@@ -304,7 +309,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       if (unchanged) return true;
 
       const previous = prefs;
-      const next = { ...prefs, sectionOrder: nextOrder };
+      const next = {
+        ...prefs,
+        sectionOrder: nextOrder,
+        updatedAt: Date.now(),
+      };
       setPrefs(next);
       busyRef.current = true;
       setBusy(true);
@@ -324,6 +333,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     [hydrated, prefs],
   );
 
+  const reload = useCallback(async () => {
+    const loaded = await loadPlans().catch(() => null);
+    if (!loaded) return;
+    setItems(loaded.items);
+    setPrefs(loaded.prefs);
+  }, []);
+
   const value = useMemo<PlanContextValue>(
     () => ({
       hydrated,
@@ -336,6 +352,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       removePlan,
       setSectionVisible,
       moveSectionTo,
+      reload,
     }),
     [
       hydrated,
@@ -348,6 +365,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       removePlan,
       setSectionVisible,
       moveSectionTo,
+      reload,
     ],
   );
 

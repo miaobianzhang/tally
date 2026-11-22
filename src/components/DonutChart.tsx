@@ -7,7 +7,9 @@ import {
 } from 'react-native';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
 import type { ActivityGroup, CategoryGroup } from '../utils/analytics';
 import { layoutCategoryLabels } from '../utils/categoryLabels';
 import { buildDonutArcs } from '../utils/donut';
@@ -40,10 +42,13 @@ export function DonutChart({
   accessibilityLabel,
   variant = 'activity',
   showDirectLabels = false,
-  gapColor = colors.page,
+  gapColor,
   selectedActivityKey = null,
   onSelectActivity,
 }: DonutChartProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const resolvedGapColor = gapColor ?? colors.page;
   const [containerWidth, setContainerWidth] = useState(0);
   const interactive =
     variant === 'activity' && onSelectActivity !== undefined;
@@ -140,7 +145,7 @@ export function DonutChart({
           cy={centerY}
           outerRadius={ringOuter}
           innerRadius={ringInner}
-          gapColor={gapColor}
+          gapColor={resolvedGapColor}
           selectedKey={selectedKey}
           onSelect={interactive ? onSelectActivity : undefined}
         />
@@ -183,7 +188,7 @@ export function DonutChart({
                 ? 0.35
                 : 1
             }
-            stroke={gapColor}
+            stroke={resolvedGapColor}
             strokeWidth={1.5}
           />
         ))}
@@ -268,7 +273,7 @@ export function DonutChart({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignSelf: 'center',
     overflow: 'visible',

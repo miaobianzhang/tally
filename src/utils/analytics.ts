@@ -1,5 +1,10 @@
-import { CATEGORIES } from '../constants/categories';
-import type { CategoryId, Session } from '../types';
+import { FALLBACK_CATEGORY } from '../constants/categories';
+import type {
+  CategoryDefinition,
+  CategoryId,
+  CategoryLookup,
+  Session,
+} from '../types';
 import {
   calendarDayCount,
   type Bucket,
@@ -27,7 +32,7 @@ export interface CategoryGroup {
 
 export interface Breakdown {
   totalMs: number;
-  /** Work + study, already clipped to the same range as totalMs. */
+  /** Time in categories marked countsAsFocus, clipped to the same range. */
   studyWorkMs: number;
   categories: CategoryGroup[];
   /** Flattened in category order; used by the donut's outer ring. */
@@ -36,8 +41,8 @@ export interface Breakdown {
 
 export interface TrendBucket extends Bucket {
   totalMs: number;
-  /** Aligned with CATEGORIES. */
-  categoryMs: number[];
+  /** Keyed by category id; missing ids are zero. */
+  categoryMs: Record<string, number>;
   studyWorkMs: number;
 }
 
@@ -49,10 +54,22 @@ export interface TrendAnalysis {
   dailyAverageMs: number;
 }
 
-const STUDY_WORK_IDS: readonly CategoryId[] = ['work', 'study'];
-const CATEGORY_INDEX = new Map<CategoryId, number>(
-  CATEGORIES.map((category, index) => [category.id, index]),
-);
+export function focusLabel(lookup: CategoryLookup): string {
+  const focus = lookup.ordered.filter((category) => category.countsAsFocus);
+  if (
+    focus.length === 2 &&
+    focus.every(
+      (category) =>
+        category.id === 'work' || category.id === 'study',
+    )
+  ) {
+    return '学习 + 工作';
+  }
+  if (focus.length > 0 && focus.length <= 2) {
+    return focus.map((category) => category.label).join(' + ');
+  }
+  return '专注时间';
+}
 
 export function overlapMs(
   session: Session,
@@ -77,9 +94,23 @@ interface ActivityAccumulator {
   firstSeen: number;
 }
 
+function fallbackCategory(id: CategoryId): CategoryDefinition {
+  return {
+    id,
+    label: FALLBACK_CATEGORY.label,
+    color: FALLBACK_CATEGORY.color,
+    archived: true,
+    countsAsFocus: false,
+    order: Number.MAX_SAFE_INTEGER,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
+
 export function buildBreakdown(
   sessions: Session[],
   range: DateRange,
+  lookup: CategoryLookup,
 ): Breakdown {
   if (range.end <= range.start) {
     return {
@@ -94,6 +125,7 @@ export function buildBreakdown(
     CategoryId,
     Map<string, ActivityAccumulator>
   >();
+  const unknownIds = new Map<CategoryId, number>();
   let totalMs = 0;
   let studyWorkMs = 0;
 
@@ -103,6 +135,10 @@ export function buildBreakdown(
 
     const label = normalizeActivityLabel(session.activity);
     if (!label) return;
+
+    if (!lookup.byId.has(session.category) && !unknownIds.has(session.category)) {
+      unknownIds.set(session.category, unknownIds.size);
+    }
 
     const key = `${session.category}|${label.toLowerCase()}`;
     let categoryActivities = activitiesByCategory.get(session.category);
@@ -125,21 +161,27 @@ export function buildBreakdown(
     }
 
     totalMs += activityMs;
-    if (STUDY_WORK_IDS.includes(session.category)) {
+    if (lookup.focusIds.has(session.category)) {
       studyWorkMs += activityMs;
     }
   });
 
-  const categoriesWithData = CATEGORIES.map((category) => {
-    const accumulatorMap = activitiesByCategory.get(category.id);
-    const activities = accumulatorMap
-      ? [...accumulatorMap.values()].sort(
-          (a, b) => b.ms - a.ms || a.firstSeen - b.firstSeen,
-        )
-      : [];
-    const ms = activities.reduce((sum, activity) => sum + activity.ms, 0);
-    return { category, activities, ms };
-  }).filter((row) => row.ms > 0);
+  const orderedCategories = [...lookup.ordered];
+  const unknown = [...unknownIds.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([id]) => fallbackCategory(id));
+  const categoriesWithData = [...orderedCategories, ...unknown]
+    .map((category) => {
+      const accumulatorMap = activitiesByCategory.get(category.id);
+      const activities = accumulatorMap
+        ? [...accumulatorMap.values()].sort(
+            (a, b) => b.ms - a.ms || a.firstSeen - b.firstSeen,
+          )
+        : [];
+      const ms = activities.reduce((sum, activity) => sum + activity.ms, 0);
+      return { category, activities, ms };
+    })
+    .filter((row) => row.ms > 0);
 
   const categoryShares = allocateShares(
     categoriesWithData.map((row) => row.ms),
@@ -180,15 +222,31 @@ export function buildBreakdown(
   };
 }
 
+/** First bucket whose end is after `timestamp`. */
+function findFirstBucket(buckets: Bucket[], timestamp: number): number {
+  let low = 0;
+  let high = buckets.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (buckets[middle].end <= timestamp) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
 export function buildTrendAnalysis(
   sessions: Session[],
   range: DateRange,
   buckets: Bucket[],
+  lookup: CategoryLookup,
 ): TrendAnalysis {
   const trendBuckets: TrendBucket[] = buckets.map((bucket) => ({
     ...bucket,
     totalMs: 0,
-    categoryMs: CATEGORIES.map(() => 0),
+    categoryMs: {},
     studyWorkMs: 0,
   }));
 
@@ -196,24 +254,32 @@ export function buildTrendAnalysis(
   let studyWorkMs = 0;
 
   sessions.forEach((session) => {
-    trendBuckets.forEach((bucket) => {
+    if (session.endedAt <= range.start || session.startedAt >= range.end) {
+      return;
+    }
+    const start = Math.max(session.startedAt, range.start);
+    const end = Math.min(session.endedAt, range.end);
+    let index = findFirstBucket(buckets, start);
+
+    while (index < buckets.length) {
+      const bucket = buckets[index];
+      if (bucket.start >= end) break;
       const activityMs = overlapMs(session, bucket.start, bucket.end);
-      if (activityMs <= 0) return;
-
-      bucket.totalMs += activityMs;
-      const categoryIndex = CATEGORY_INDEX.get(session.category);
-      if (categoryIndex !== undefined) {
-        bucket.categoryMs[categoryIndex] += activityMs;
+      if (activityMs > 0) {
+        const target = trendBuckets[index];
+        target.totalMs += activityMs;
+        target.categoryMs[session.category] =
+          (target.categoryMs[session.category] ?? 0) + activityMs;
+        if (lookup.focusIds.has(session.category)) {
+          target.studyWorkMs += activityMs;
+        }
+        totalMs += activityMs;
+        if (lookup.focusIds.has(session.category)) {
+          studyWorkMs += activityMs;
+        }
       }
-      if (STUDY_WORK_IDS.includes(session.category)) {
-        bucket.studyWorkMs += activityMs;
-      }
-
-      totalMs += activityMs;
-      if (STUDY_WORK_IDS.includes(session.category)) {
-        studyWorkMs += activityMs;
-      }
-    });
+      index += 1;
+    }
   });
 
   const days = calendarDayCount(range);

@@ -8,7 +8,9 @@ import {
   type ScrollViewInstance,
 } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import { readableTextColor } from '../utils/chart';
 import type { TimelineDay, TimelineSegment } from '../utils/timeline';
 import {
@@ -62,6 +64,7 @@ export function TimelineBoard({
   variant,
   now,
 }: TimelineBoardProps) {
+  const styles = useThemedStyles(createStyles);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const hasScrolled = useRef(false);
   const [selected, setSelected] = useState<{
@@ -244,7 +247,7 @@ export function TimelineBoard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   hint: {
     fontSize: 11,
     color: colors.muted,

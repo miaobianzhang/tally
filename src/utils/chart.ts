@@ -1,4 +1,3 @@
-import { colors } from '../theme';
 import type { Bucket, Granularity } from './dateRange';
 
 export interface ChartMetrics {
@@ -229,9 +228,13 @@ export function linePath(
 }
 
 /** Pick black or white text for a category-colored block. */
-export function readableTextColor(hex: string): string {
+export function readableTextColor(
+  hex: string,
+  dark = '#0B0B0B',
+  light = '#FFFFFF',
+): string {
   const value = hex.replace('#', '');
-  if (value.length !== 6) return colors.onAccent;
+  if (value.length !== 6) return light;
 
   const red = parseInt(value.slice(0, 2), 16) / 255;
   const green = parseInt(value.slice(2, 4), 16) / 255;
@@ -247,7 +250,7 @@ export function readableTextColor(hex: string): string {
   const whiteContrast = 1.05 / (luminance + 0.05);
   const blackContrast = (luminance + 0.05) / 0.05;
 
-  return blackContrast >= whiteContrast ? colors.text : colors.onAccent;
+  return blackContrast >= whiteContrast ? dark : light;
 }
 
 export function formatAxisDuration(ms: number): string {
@@ -261,11 +264,9 @@ export function formatAxisDuration(ms: number): string {
 
   if (ms < DAY_MS) {
     const hours = ms / HOUR_MS;
-    return Number.isInteger(hours)
-      ? `${hours}h`
-      : `${hours.toFixed(1)}h`;
+    return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
   }
 
   const days = ms / DAY_MS;
-  return Number.isInteger(days) ? `${days}d` : `${Math.round(days)}d`;
+  return Number.isInteger(days) ? `${days}d` : `${days.toFixed(1)}d`;
 }

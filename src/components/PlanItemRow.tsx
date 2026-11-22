@@ -1,8 +1,11 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getCategory } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
 import { usePlans } from '../hooks/usePlans';
-import { colors, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { spacing } from '../theme';
 import type { PlanItem } from '../types';
 import { hapticSelection } from '../utils/haptics';
 import {
@@ -27,8 +30,11 @@ export function PlanItemRow({
   onStart,
   onEdit,
 }: PlanItemRowProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { toggleComplete } = usePlans();
-  const category = getCategory(plan.category);
+  const { resolveCategory } = useCategories();
+  const category = resolveCategory(plan.category);
   const completed = plan.completedAt !== null;
   const tone = deadlineTone(plan, now);
   const dueText =
@@ -144,7 +150,7 @@ export function PlanItemRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

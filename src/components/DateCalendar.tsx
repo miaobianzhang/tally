@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import {
   buildMonthGrid,
   formatFullDateWithYear,
@@ -26,6 +28,7 @@ export function DateCalendar({
   onChange,
   now,
 }: DateCalendarProps) {
+  const styles = useThemedStyles(createStyles);
   const today = dayStart(now);
   const todayDate = new Date(today);
   const floor = new Date(
@@ -151,7 +154,7 @@ export function DateCalendar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     padding: spacing.md,
     borderRadius: radius.md,

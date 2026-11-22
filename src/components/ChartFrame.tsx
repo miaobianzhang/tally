@@ -8,7 +8,9 @@ import {
 } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
 import {
   bucketCenterX,
   computeChartMetrics,
@@ -41,6 +43,8 @@ export function ChartFrame({
   children,
   overlay,
 }: ChartFrameProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [containerWidth, setContainerWidth] = useState(0);
 
   const granularity = buckets[0]?.granularity ?? 'day';
@@ -165,7 +169,7 @@ export function ChartFrame({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   frame: {
     flexDirection: 'row',
     width: '100%',

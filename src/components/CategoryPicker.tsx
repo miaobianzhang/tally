@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CATEGORIES } from '../constants/categories';
-import { colors, radius, spacing } from '../theme';
+import { useCategories } from '../hooks/useCategories';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { CategoryId } from '../types';
 
 interface CategoryPickerProps {
@@ -15,16 +17,27 @@ export function CategoryPicker({
   onChange,
   disabled = false,
 }: CategoryPickerProps) {
+  const styles = useThemedStyles(createStyles);
+  const { activeCategories, resolveCategory } = useCategories();
+  const current = resolveCategory(value);
+  const archivedCurrent =
+    current.archived && !activeCategories.some((item) => item.id === value)
+      ? current
+      : null;
+  const items = archivedCurrent
+    ? [...activeCategories, archivedCurrent]
+    : activeCategories;
+
   return (
     <View style={styles.chips}>
-      {CATEGORIES.map((item) => {
+      {items.map((item) => {
         const selected = item.id === value;
         return (
           <Pressable
             key={item.id}
             accessibilityRole="radio"
             accessibilityState={{ selected, disabled }}
-            accessibilityLabel={`分类 ${item.label}`}
+            accessibilityLabel={`分类 ${item.label}${item.archived ? '，已停用' : ''}`}
             disabled={disabled}
             onPress={() => onChange(item.id)}
             style={({ pressed }) => [
@@ -44,6 +57,7 @@ export function CategoryPicker({
               ]}
             >
               {item.label}
+              {item.archived ? '（已停用）' : ''}
             </Text>
           </Pressable>
         );
@@ -52,7 +66,7 @@ export function CategoryPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',

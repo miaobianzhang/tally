@@ -1,4 +1,4 @@
-export const CATEGORY_IDS = [
+export const BUILTIN_CATEGORY_IDS = [
   'work',
   'study',
   'rest',
@@ -7,7 +7,29 @@ export const CATEGORY_IDS = [
   'other',
 ] as const;
 
-export type CategoryId = (typeof CATEGORY_IDS)[number];
+export type BuiltinCategoryId = (typeof BUILTIN_CATEGORY_IDS)[number];
+
+/**
+ * Category ids are persisted data. Keep this open-ended so ids created by this
+ * version, restored backups, or a newer app version are never dropped.
+ */
+export type CategoryId = string;
+
+export interface CategoryDefinition {
+  id: CategoryId;
+  label: string;
+  color: string;
+  archived: boolean;
+  countsAsFocus: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CategoryState {
+  version: 1;
+  categories: CategoryDefinition[];
+}
 
 export interface Session {
   id: string;
@@ -16,6 +38,8 @@ export interface Session {
   startedAt: number;
   endedAt: number;
   createdAt: number;
+  /** Last edit time; legacy records fall back to createdAt. */
+  updatedAt?: number;
 }
 
 /** Snapshot of a plan item taken when its timer starts. */
@@ -43,6 +67,7 @@ export type TimerState =
 
 export interface Prefs {
   lastCategory: CategoryId;
+  updatedAt?: number;
 }
 
 export const PLAN_SECTIONS = ['week', 'month', 'deadline'] as const;
@@ -68,12 +93,41 @@ export interface PlanPrefs {
   showMonth: boolean;
   showDeadlines: boolean;
   sectionOrder: PlanSection[];
+  updatedAt?: number;
+}
+
+export interface Tombstones {
+  plans: Record<string, number>;
+}
+
+export interface Profile {
+  displayName: string;
+  avatarUri: string | null;
+  updatedAt: number;
+}
+
+export interface CategoryLookup {
+  byId: ReadonlyMap<CategoryId, CategoryDefinition>;
+  active: readonly CategoryDefinition[];
+  ordered: readonly CategoryDefinition[];
+  focusIds: ReadonlySet<CategoryId>;
 }
 
 export function isCategoryId(value: unknown): value is CategoryId {
   return (
     typeof value === 'string' &&
-    (CATEGORY_IDS as readonly string[]).includes(value)
+    value.length > 0 &&
+    value.length <= 128 &&
+    !/[\u0000-\u001f]/.test(value)
+  );
+}
+
+export function isBuiltinCategoryId(
+  value: unknown,
+): value is BuiltinCategoryId {
+  return (
+    typeof value === 'string' &&
+    (BUILTIN_CATEGORY_IDS as readonly string[]).includes(value)
   );
 }
 

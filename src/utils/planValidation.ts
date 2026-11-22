@@ -79,6 +79,10 @@ export function normalizePlanPrefs(value: unknown): PlanPrefs {
     showMonth: value.showMonth,
     showDeadlines: value.showDeadlines,
     sectionOrder: normalizeSectionOrder(value.sectionOrder),
+    updatedAt:
+      typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt)
+        ? value.updatedAt
+        : undefined,
   };
 }
 

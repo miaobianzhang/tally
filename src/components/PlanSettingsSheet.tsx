@@ -12,7 +12,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PLAN_SECTION_LABELS } from '../constants/plans';
 import { usePlans } from '../hooks/usePlans';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import { PLAN_SECTIONS, type PlanSection } from '../types';
 import { hapticSelection } from '../utils/haptics';
 
@@ -21,6 +24,8 @@ interface PlanSettingsSheetProps {
 }
 
 export function PlanSettingsSheet({ onClose }: PlanSettingsSheetProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { prefs, busy, setSectionVisible, moveSectionTo } = usePlans();
   const insets = useSafeAreaInsets();
 
@@ -181,7 +186,7 @@ export function PlanSettingsSheet({ onClose }: PlanSettingsSheetProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
   },

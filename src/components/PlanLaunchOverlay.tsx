@@ -9,9 +9,11 @@ import {
   View,
 } from 'react-native';
 
-import { getCategory } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
 import { useReduceMotion } from '../hooks/useReduceMotion';
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { PlanItem } from '../types';
 
 export interface LaunchOrigin {
@@ -37,9 +39,11 @@ export function PlanLaunchOverlay({
   onNavigate,
   onDone,
 }: PlanLaunchOverlayProps) {
+  const styles = useThemedStyles(createStyles);
   const reduceMotion = useReduceMotion();
+  const { resolveCategory } = useCategories();
   const { width, height } = useWindowDimensions();
-  const category = getCategory(plan.category);
+  const category = resolveCategory(plan.category);
 
   const [veilOpacity] = useState(() => new Animated.Value(0));
   const [tintOpacity] = useState(() => new Animated.Value(0));
@@ -300,7 +304,7 @@ export function PlanLaunchOverlay({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
   },

@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '../theme';
+import { useCategories } from '../hooks/useCategories';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { Session } from '../types';
 import {
   buildBreakdown,
@@ -30,10 +33,12 @@ export function BucketDetailSheet({
   sessions,
   onClose,
 }: BucketDetailSheetProps) {
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
+  const { lookup } = useCategories();
   const breakdown = useMemo(
-    () => (bucket ? buildBreakdown(sessions, bucket) : null),
-    [bucket, sessions],
+    () => (bucket ? buildBreakdown(sessions, bucket, lookup) : null),
+    [bucket, sessions, lookup],
   );
 
   if (!bucket || !breakdown) return null;
@@ -96,7 +101,7 @@ export function BucketDetailSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   flex: {
     flex: 1,
     justifyContent: 'flex-end',

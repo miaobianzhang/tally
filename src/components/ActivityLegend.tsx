@@ -5,7 +5,9 @@ import {
   View,
 } from 'react-native';
 
-import { colors, radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { CategoryGroup } from '../utils/analytics';
 import { formatDuration, formatPercent } from '../utils/time';
 
@@ -23,6 +25,7 @@ export function ActivityLegend({
   selectedActivityKey = null,
   onSelectActivity,
 }: ActivityLegendProps) {
+  const styles = useThemedStyles(createStyles);
   if (categories.length === 0) return null;
 
   return (
@@ -132,7 +135,7 @@ export function ActivityLegend({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   groupSpacing: {
     marginTop: spacing.sm,
   },

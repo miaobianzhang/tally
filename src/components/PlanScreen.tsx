@@ -18,7 +18,10 @@ import {
 import { useDayKey } from '../hooks/useDayKey';
 import { usePlans } from '../hooks/usePlans';
 import { useTally } from '../hooks/useTally';
-import { colors, radius, spacing } from '../theme';
+import { useTheme } from '../theme/ThemeProvider';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ThemeColors } from '../theme/types';
+import { radius, spacing } from '../theme';
 import type { PlanItem, PlanSection } from '../types';
 import {
   currentPeriodStart,
@@ -53,6 +56,8 @@ interface LaunchState {
 }
 
 export function PlanScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const {
     hydrated: plansHydrated,
     busy: plansBusy,
@@ -402,7 +407,7 @@ export function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.page,
@@ -423,12 +428,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     letterSpacing: -0.5,
-    color: colors.text,
+    color: colors.textOnPage,
   },
   subtitle: {
     marginTop: 6,
     fontSize: 13,
-    color: colors.muted,
+    color: colors.mutedOnPage,
   },
   settingsButton: {
     height: 36,

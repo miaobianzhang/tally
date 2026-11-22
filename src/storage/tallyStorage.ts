@@ -117,6 +117,15 @@ export async function loadTally(): Promise<LoadedTally> {
   return { sessions, timer, prefs };
 }
 
+export function replaceSessions(sessions: Session[]): Promise<void> {
+  return enqueue(() =>
+    AsyncStorage.setItem(
+      STORAGE_KEYS.sessions,
+      JSON.stringify(sessions),
+    ),
+  );
+}
+
 export function saveTimer(timer: TimerState): Promise<void> {
   return enqueue(() =>
     AsyncStorage.setItem(STORAGE_KEYS.timer, JSON.stringify(timer)),

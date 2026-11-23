@@ -78,7 +78,6 @@ export function TimerScreen() {
               accessibilityLabel={`打开设置，${profile.displayName}`}
               onPress={() => router.push('/settings')}
             />
-            <Text style={styles.wordmark}>Tally</Text>
           </View>
           <Text style={styles.date}>{formatDateLabel(now)}</Text>
         </View>
@@ -159,12 +158,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  wordmark: {
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: -0.5,
-    color: colors.textOnPage,
   },
   date: {
     fontSize: 13,

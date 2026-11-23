@@ -1,5 +1,52 @@
 # Tally 开发日志
 
+## v0.14.0 — 2026-11-23
+
+**目标**：精简 Deadline 倒计时；为计划完成和分类排序加入移动动画；修复月分析 7 天档位折线圆点缺失；在周分析中加入固定 7 天分类堆叠柱状图。
+
+### 新增
+
+- 新增 `animateNextLayoutChange`：使用 RN `LayoutAnimation` 的 update 过渡（220ms），不引入 Reanimated。
+- 新增 `WeeklyDailyBarCard`：周分析中固定宽度的 7 天分类堆叠柱状图，带紧凑分类图例和无障碍摘要。
+- 新增 `ChartFrame` / `StackedBarChart` 的 `fitContent` 模式：内容宽度等于视口，7 根柱不横向滚动。
+- 月分析 7 天档位新增独立 `markerIndices`，可视窗口内每天都会绘制折线和趋势圆点。
+
+### 变更
+
+- Deadline 倒计时文案改为 `N 天`；今天保留 `今天截止`，逾期 `逾期 N 天`，完成 `已完成`。
+- Deadline 倒计时去掉填充外框，改为右侧 16px 粗体文字，按状态使用危险/进行中/次要文字色。
+- `toggleComplete` 接受 `animate` 参数，在保存完成状态后、`setItems` 前配置布局动画。
+- `moveCategory` / `commit` 接受 `animate` 参数，仅分类 ↑ / ↓ 排序播放移动动画。
+- `SettingsScreen` 订阅 `useReduceMotion`；计划页沿用已有的单次订阅，减少动态效果开启时不播放移动动画。
+- `StackedBarChart` 分类堆叠顺序改为 `lookup.ordered`，与月分析图表和分类设置顺序一致。
+- 周分析在「分类分布」和「有效时间趋势」之间插入「一周每日分布」卡片。
+- 主页左上角移除 `Tally` 文本，仅保留用户头像入口。
+- 版本升级到 `0.14.0`，Android `versionCode` 升级到 14，`package-lock.json` 同步。
+
+### 技术说明
+
+- 计划重排来自 `sortPlansForSection`，完成项排到最后；布局动画必须配置在最终的 `setItems` 前，不能放在按钮 handler 中，否则会被 `setBusy(true)` 消耗。
+- 分类排序是乐观更新：`commit` 同步 `setCategories(next)`，动画配置紧挨着这次提交；保存后的第二次 `setCategories(saved)` 顺序相同，不会重复移动。
+- 7 天圆点索引使用 `[first, last]`；该窗口包含 overscan，因此一定覆盖可视的 7 天，且不需要恢复每帧滚动 state。
+- `computeChartMetrics(..., fitContent=true)` 直接令 `contentWidth = viewportWidth`、`scrollable = false`；窄屏也只压缩柱宽，不产生滚动。
+- 当前周柱状图沿用 `trend.buckets`（周一到今天），与「本周至今」统计和时间轴保持一致。
+
+### 已知限制
+
+- `LayoutAnimation` 在个别设备/系统动画设置下可能不播放，但排序结果不受影响。
+- 当前周的 7 天柱状图只显示周一至今天；未来日不会补零。
+- 7 天圆点会包含 overscan 中不可见的日期，这是预渲染的一部分。
+- 全部分类被隐藏或极端窄屏时，柱子会变窄，但不会横向滚动。
+
+### 验证
+
+- `npx tsc --noEmit`：通过。
+- `npx expo lint`：通过。
+- `npx expo export --platform android`：通过。
+- `npx expo-doctor`：20/20 通过。
+- 临时断言：`deadlineLabel` 为 `N 天` / `今天截止` / `逾期 N 天` / `已完成`；`fitContent` 在 160px 容器下 `contentWidth === viewportWidth` 且 `scrollable === false`。
+- 待真机验证：计划与分类移动动画、7 天圆点、周柱状图不滚动、减少动态效果。
+
 ## v0.13.0 — 2026-11-23
 
 **目标**：让 Deadline 剩余天数更醒目；已完成计划可一键删除；完成勾选加入动画；分类支持删除和顺序调整；修正个人资料输入时的键盘遮挡。

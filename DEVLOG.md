@@ -36,6 +36,8 @@
 - `npx expo lint`：通过。
 - `npx expo export --platform android`：通过。
 - `npx expo-doctor`：20/20 通过。
+- GitHub Actions `eas build --local` 构建成功，使用原 EAS 签名证书 `F-REDTuMCn (default)`；artifact zip SHA-256 与 Actions 日志一致，APK 内包含 `libreanimated.so` / `libworklets.so`。
+- v0.14.1 APK：98,621,188 字节（94.05 MiB），SHA-256 `6C9A34B7E3BEB5EB7AA4BAE35043C9119D059B631E1778E1B684BC1688F462B9`。
 - 待真机验证：完成/取消计划移动、分类排序移动、减少动态效果、7 天圆点稳定、Deadline 标题对齐。
 
 ## v0.14.0 — 2026-11-23

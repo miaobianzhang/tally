@@ -40,7 +40,7 @@ v0.14.1 修复移动动画和 7 天折线圆点：计划完成、分类排序改
 
 ## 版本
 
-当前源码版本 `0.14.1`，Android 包名 `com.tally.app`，versionCode `15`。GitHub Releases 最新公开 APK 仍为 v0.14.0；v0.14.1 构建发布后更新。
+当前版本 `0.14.1`，Android 包名 `com.tally.app`，versionCode `15`。
 
 ## 环境要求
 
@@ -56,11 +56,11 @@ v0.14.1 修复移动动画和 7 天折线圆点：计划完成、分类排序改
 
 https://github.com/miaobianzhang/tally/releases/latest
 
-最新 APK（v0.14.0）：98,621,500 字节 / 94.05 MiB
+最新 APK（v0.14.1）：98,621,188 字节 / 94.05 MiB
 
-SHA-256：`616B6F15A236F45CDEFACCC577FFB249C15954FA27E02B2BC97E79ACCA98057B`
+SHA-256：`6C9A34B7E3BEB5EB7AA4BAE35043C9119D059B631E1778E1B684BC1688F462B9`
 
-构建记录：https://github.com/miaobianzhang/tally/actions/runs/45197114612
+构建记录：https://github.com/miaobianzhang/tally/actions/runs/45219409558
 
 Release 附件由 GitHub 长期托管，下载不需要 GitHub 账号。本版 APK 通过 GitHub Actions 在 Ubuntu runner 上执行 `eas build --local` 构建，使用原有 EAS 托管签名证书，不消耗 EAS 云端构建额度。
 

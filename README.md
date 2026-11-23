@@ -40,7 +40,7 @@ v0.14.0 把 Deadline 倒计时改成右侧大字，完成计划和分类排序�
 
 ## 版本
 
-当前源码版本 `0.14.0`，Android 包名 `com.tally.app`，versionCode `14`。GitHub Releases 最新公开 APK 仍为 v0.13.0；v0.14.0 构建发布后更新。
+当前版本 `0.14.0`，Android 包名 `com.tally.app`，versionCode `14`。
 
 ## 环境要求
 
@@ -56,11 +56,11 @@ v0.14.0 把 Deadline 倒计时改成右侧大字，完成计划和分类排序�
 
 https://github.com/miaobianzhang/tally/releases/latest
 
-最新公开 APK（v0.13.0）：98,615,392 字节 / 94.05 MiB
+最新 APK（v0.14.0）：98,621,500 字节 / 94.05 MiB
 
-SHA-256：`4D2BE15DD404283A573444FC680CC655D7137D1E816CE85D6C9362DE09A87B80`
+SHA-256：`616B6F15A236F45CDEFACCC577FFB249C15954FA27E02B2BC97E79ACCA98057B`
 
-构建记录：https://github.com/miaobianzhang/tally/actions/runs/45180724728
+构建记录：https://github.com/miaobianzhang/tally/actions/runs/45197114612
 
 Release 附件由 GitHub 长期托管，下载不需要 GitHub 账号。本版 APK 通过 GitHub Actions 在 Ubuntu runner 上执行 `eas build --local` 构建，使用原有 EAS 托管签名证书，不消耗 EAS 云端构建额度。
 

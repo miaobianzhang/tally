@@ -45,7 +45,9 @@
 - `npx expo export --platform android`：通过。
 - `npx expo-doctor`：20/20 通过。
 - 临时断言：`deadlineLabel` 为 `N 天` / `今天截止` / `逾期 N 天` / `已完成`；`fitContent` 在 160px 容器下 `contentWidth === viewportWidth` 且 `scrollable === false`。
-- 待真机验证：计划与分类移动动画、7 天圆点、周柱状图不滚动、减少动态效果。
+- GitHub Actions `eas build --local` 构建成功，使用原 EAS 签名证书 `F-REDTuMCn (default)`；artifact zip SHA-256 与 Actions 日志一致。
+- v0.14.0 APK：98,621,500 字节（94.05 MiB），SHA-256 `616B6F15A236F45CDEFACCC577FFB249C15954FA27E02B2BC97E79ACCA98057B`。
+- 待真机验证：计划与分类移动动画、7 天圆点、周柱状图不滚动、减少动态效果、主页头像布局。
 
 ## v0.13.0 — 2026-11-23
 

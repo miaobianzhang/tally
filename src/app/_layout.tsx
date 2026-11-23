@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SessionModal } from '../components/SessionModal';
 import { CategoryProvider } from '../hooks/useCategories';
@@ -63,6 +64,7 @@ function ThemedRoot() {
 
 export default function RootLayout() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider>
       <ProfileProvider>
         <CategoryProvider>
@@ -76,5 +78,6 @@ export default function RootLayout() {
         </CategoryProvider>
       </ProfileProvider>
     </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

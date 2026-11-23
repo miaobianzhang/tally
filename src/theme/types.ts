@@ -6,6 +6,8 @@ export interface BackgroundPref {
   kind: BackgroundKind;
   presetId?: string;
   imageUri?: string | null;
+  /** 0.15–1; controls the photo itself, independent of the preset scrim. */
+  imageOpacity: number;
   scrim?: number;
 }
 
@@ -45,12 +47,12 @@ export interface ThemeValue {
   mode: 'light' | 'dark';
   prefs: AppearancePrefs;
   background: BackgroundPref;
-  setMode: (mode: ThemeMode) => Promise<void>;
+  setMode: (mode: ThemeMode) => Promise<boolean>;
   setColor: (
     key: 'pageColor' | 'surfaceColor' | 'accentColor',
     color: string | null,
-  ) => Promise<void>;
-  setBackground: (background: BackgroundPref) => Promise<void>;
-  resetAppearance: () => Promise<void>;
+  ) => Promise<boolean>;
+  setBackground: (background: BackgroundPref) => Promise<boolean>;
+  resetAppearance: () => Promise<boolean>;
   hydrated: boolean;
 }

@@ -36,6 +36,7 @@ export function UserAvatar({
     >
       {showImage && uri ? (
         <Image
+          key={uri}
           source={{ uri }}
           style={{ width: size, height: size }}
           resizeMode="cover"

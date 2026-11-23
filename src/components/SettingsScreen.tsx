@@ -34,10 +34,6 @@ import { BACKGROUND_PRESETS } from '../theme/presets';
 import type { CategoryDefinition } from '../types';
 import { hapticSelection } from '../utils/haptics';
 import {
-  deleteStoredImage,
-  storePickedImage,
-} from '../utils/imageStorage';
-import {
   exportSessionsCsv,
   exportSnapshotJson,
 } from '../utils/exportData';
@@ -46,6 +42,7 @@ import { mergeSnapshots } from '../sync/merge';
 import { replaceCategories } from '../storage/categoryStorage';
 import { replaceSessions, savePrefs } from '../storage/tallyStorage';
 import { replacePlanItems, savePlanPrefs } from '../storage/planStorage';
+import { BackgroundEditorSheet } from './settings/BackgroundEditorSheet';
 import { CategoryEditorSheet } from './settings/CategoryEditorSheet';
 import { ColorChoiceSheet } from './settings/ColorChoiceSheet';
 import { ProfileEditorSheet } from './settings/ProfileEditorSheet';
@@ -86,6 +83,9 @@ export function SettingsScreen() {
     title: string;
   } | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [backgroundEditor, setBackgroundEditor] = useState<{
+    sourceUri?: string;
+  } | null>(null);
 
   const active = categories.filter((category) => !category.archived);
   const archived = categories.filter((category) => category.archived);
@@ -196,33 +196,37 @@ export function SettingsScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
+      quality: 1,
     });
     if (result.canceled || !result.assets[0]) return;
-    try {
-      const uri = await storePickedImage(
-        result.assets[0].uri,
-        'background',
-      );
-      const previous = prefs.background.imageUri;
-      await setBackground({ kind: 'image', imageUri: uri, scrim: 0.4 });
-      if (previous && previous !== uri) deleteStoredImage(previous);
-      hapticSelection();
-    } catch (error) {
-      console.warn('[tally] background pick failed', error);
-      Alert.alert('背景读取失败', '请换一张图片重试。');
-    }
+    setBackgroundEditor({ sourceUri: result.assets[0].uri });
+    hapticSelection();
   };
 
   const setPreset = (id: string | null, kind: BackgroundKind) => {
-    const previous = prefs.background.imageUri;
-    if (id === null) {
-      void setBackground({ kind: 'theme' });
-    } else {
-      void setBackground({ kind, presetId: id, scrim: 0.4 });
-    }
-    if (previous) deleteStoredImage(previous);
+    void setBackground({
+      ...prefs.background,
+      kind,
+      presetId: id ?? undefined,
+    });
     hapticSelection();
+  };
+
+  const handlePhotoTile = () => {
+    if (!prefs.background.imageUri) {
+      void chooseBackground();
+      return;
+    }
+    if (prefs.background.kind === 'image') {
+      setBackgroundEditor({});
+    } else {
+      void setBackground({
+        ...prefs.background,
+        kind: 'image',
+        presetId: undefined,
+      });
+      hapticSelection();
+    }
   };
 
   return (
@@ -393,16 +397,16 @@ export function SettingsScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="默认背景"
+              accessibilityState={{ selected: prefs.background.kind === 'theme' }}
               onPress={() => setPreset(null, 'theme')}
-              style={[
-                styles.backgroundTile,
-                prefs.background.kind === 'theme' && styles.tileSelected,
-              ]}
+              style={styles.backgroundTile}
             >
               <View
                 style={[
                   styles.backgroundFill,
                   { backgroundColor: colors.page },
+                  prefs.background.kind === 'theme' &&
+                    styles.backgroundFillSelected,
                 ]}
               />
               <Text
@@ -413,6 +417,11 @@ export function SettingsScreen() {
               >
                 默认
               </Text>
+              {prefs.background.kind === 'theme' ? (
+                <View style={styles.checkBadge}>
+                  <Text style={styles.checkText}>✓</Text>
+                </View>
+              ) : null}
             </Pressable>
             {BACKGROUND_PRESETS.map((preset) => {
               const selected =
@@ -423,15 +432,16 @@ export function SettingsScreen() {
                   key={preset.id}
                   accessibilityRole="button"
                   accessibilityLabel={`背景 ${preset.label}`}
+                  accessibilityState={{ selected }}
                   onPress={() => setPreset(preset.id, 'preset')}
-                  style={[
-                    styles.backgroundTile,
-                    selected && styles.tileSelected,
-                  ]}
+                  style={styles.backgroundTile}
                 >
                   <LinearGradient
                     colors={colors.isDark ? preset.dark : preset.light}
-                    style={styles.backgroundFill}
+                    style={[
+                      styles.backgroundFill,
+                      selected && styles.backgroundFillSelected,
+                    ]}
                   />
                   <Text
                     style={[
@@ -441,23 +451,31 @@ export function SettingsScreen() {
                   >
                     {preset.label}
                   </Text>
+                  {selected ? (
+                    <View style={styles.checkBadge}>
+                      <Text style={styles.checkText}>✓</Text>
+                    </View>
+                  ) : null}
                 </Pressable>
               );
             })}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="从相册选择背景"
-              onPress={() => void chooseBackground()}
-              style={[
-                styles.backgroundTile,
-                prefs.background.kind === 'image' && styles.tileSelected,
-              ]}
+              accessibilityState={{
+                selected: prefs.background.kind === 'image',
+              }}
+              onPress={handlePhotoTile}
+              style={styles.backgroundTile}
             >
-              {prefs.background.kind === 'image' &&
-              prefs.background.imageUri ? (
+              {prefs.background.imageUri ? (
                 <Image
                   source={{ uri: prefs.background.imageUri }}
-                  style={styles.backgroundFill}
+                  style={[
+                    styles.backgroundFill,
+                    prefs.background.kind === 'image' &&
+                      styles.backgroundFillSelected,
+                  ]}
                   resizeMode="cover"
                 />
               ) : (
@@ -473,14 +491,29 @@ export function SettingsScreen() {
               >
                 相册
               </Text>
+              {prefs.background.kind === 'image' ? (
+                <View style={styles.checkBadge}>
+                  <Text style={styles.checkText}>✓</Text>
+                </View>
+              ) : null}
             </Pressable>
           </View>
+          {prefs.background.imageUri ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void chooseBackground()}
+              style={({ pressed }) => [
+                styles.changePhotoButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.changePhotoText}>更换背景照片</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             onPress={() => {
-              const previous = prefs.background.imageUri;
               void resetAppearance();
-              if (previous) deleteStoredImage(previous);
               hapticSelection();
             }}
             style={({ pressed }) => [
@@ -566,7 +599,7 @@ export function SettingsScreen() {
           </Pressable>
         </Section>
 
-        <Section title="关于" hint="Tally 0.11.0 · 数据保存在本机">
+        <Section title="关于" hint="Tally 0.12.0 · 数据保存在本机">
           <Text style={styles.aboutText}>
             所有记录默认只保存在这台设备。开启坚果云同步后，数据会先加密再上传。
           </Text>
@@ -585,10 +618,23 @@ export function SettingsScreen() {
           onClose={() => setEditingCategory(undefined)}
         />
       ) : null}
+      {backgroundEditor ? (
+        <BackgroundEditorSheet
+          sourceUri={backgroundEditor.sourceUri}
+          onClose={() => setBackgroundEditor(null)}
+        />
+      ) : null}
       {colorSheet ? (
         <ColorChoiceSheet
           title={colorSheet.title}
           value={prefs[colorSheet.key]}
+          fallbackColor={
+            colorSheet.key === 'pageColor'
+              ? colors.page
+              : colorSheet.key === 'surfaceColor'
+                ? colors.surface
+                : colors.accent
+          }
           onSelect={(color) => {
             void setColor(colorSheet.key, color);
           }}
@@ -759,11 +805,37 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
-    tileSelected: {
-      opacity: 1,
+    backgroundFillSelected: {
+      borderWidth: 2,
+      borderColor: colors.accent,
     },
     tileLabel: { fontSize: 11, color: colors.muted },
     tileLabelSelected: { color: colors.text, fontWeight: '600' },
+    checkBadge: {
+      position: 'absolute',
+      top: -6,
+      right: 0,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: colors.accent,
+      borderWidth: 2,
+      borderColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.onAccent,
+    },
+    changePhotoButton: {
+      alignSelf: 'flex-start',
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    changePhotoText: { fontSize: 12, color: colors.textSecondary },
     photoFill: {
       width: 64,
       height: 64,

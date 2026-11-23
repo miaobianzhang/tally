@@ -40,13 +40,20 @@ export const BACKGROUND_PRESETS: readonly BackgroundPreset[] = [
   },
 ];
 
+export const DEFAULT_IMAGE_OPACITY = 0.85;
+export const DEFAULT_BACKGROUND_SCRIM = 0.4;
+
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
   version: 1,
   mode: 'system',
   pageColor: null,
   surfaceColor: null,
   accentColor: null,
-  background: { kind: 'theme' },
+  background: {
+    kind: 'theme',
+    imageOpacity: DEFAULT_IMAGE_OPACITY,
+    scrim: DEFAULT_BACKGROUND_SCRIM,
+  },
   updatedAt: 0,
 };
 

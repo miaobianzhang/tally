@@ -1,54 +1,75 @@
-import { File, Paths } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image } from 'react-native';
 
-type ImageKind = 'avatar' | 'background';
+import type { SourceCrop } from './crop';
+import {
+  copyImageToDocuments,
+  deleteImageFile,
+  type StoredImageKind,
+} from './imageFiles';
 
-const MAX_WIDTH: Record<ImageKind, number> = {
+const OUTPUT_WIDTH: Record<StoredImageKind, number> = {
   avatar: 512,
-  background: 1600,
+  background: 1080,
 };
 
-function getImageWidth(uri: string): Promise<number | null> {
-  return new Promise((resolve) => {
-    Image.getSize(
-      uri,
-      (width) => resolve(width),
-      () => resolve(null),
-    );
-  });
+const MAX_SOURCE_EDGE = 2400;
+
+export interface CropSource {
+  uri: string;
+  width: number;
+  height: number;
 }
 
-export async function storePickedImage(
+/**
+ * Decodes, downsamples, normalizes orientation and writes a canonical JPEG to
+ * cache. The returned width/height are the exact pixel space used by crop.
+ */
+export async function prepareCropSource(
   sourceUri: string,
-  kind: ImageKind,
-): Promise<string> {
-  const maxWidth = MAX_WIDTH[kind];
-  const width = await getImageWidth(sourceUri);
-  const context = ImageManipulator.ImageManipulator.manipulate(sourceUri);
-  if (width === null || width > maxWidth) {
-    context.resize({ width: maxWidth });
-  }
-  const rendered = await context.renderAsync();
-  const saved = await rendered.saveAsync({
-    compress: 0.82,
+  maxEdge = MAX_SOURCE_EDGE,
+): Promise<CropSource> {
+  const context = ImageManipulator.ImageManipulator.manipulate(
+    sourceUri,
+    { maxWidth: maxEdge, maxHeight: maxEdge },
+  );
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({
+    compress: 0.9,
     format: ImageManipulator.SaveFormat.JPEG,
   });
+  return { uri: saved.uri, width: saved.width, height: saved.height };
+}
 
-  const destination = new File(Paths.document, `${kind}.jpg`);
-  if (destination.exists) {
-    destination.delete();
-  }
-  await new File(saved.uri).copy(destination);
-  return destination.uri;
+/** Crops a picked image and writes the result to cache for preview. */
+export async function cropImageToCache(
+  sourceUri: string,
+  crop: SourceCrop,
+  kind: StoredImageKind,
+): Promise<string> {
+  const context = ImageManipulator.ImageManipulator.manipulate(sourceUri);
+  context.crop({
+    originX: crop.originX,
+    originY: crop.originY,
+    width: crop.width,
+    height: crop.height,
+  });
+  context.resize({ width: OUTPUT_WIDTH[kind] });
+  const rendered = await context.renderAsync();
+  const saved = await rendered.saveAsync({
+    compress: 0.9,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  return saved.uri;
+}
+
+/** Copies a preview/cropped cache file into Documents under a fresh name. */
+export function persistImage(
+  cacheUri: string,
+  kind: StoredImageKind,
+): Promise<string> {
+  return copyImageToDocuments(cacheUri, kind);
 }
 
 export function deleteStoredImage(uri: string | null | undefined): void {
-  if (!uri) return;
-  try {
-    const file = new File(uri);
-    if (file.exists) file.delete();
-  } catch (error) {
-    console.warn('[tally] failed to delete stored image', error);
-  }
+  deleteImageFile(uri);
 }

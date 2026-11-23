@@ -28,15 +28,19 @@ import { useThemedStyles } from '../theme/useThemedStyles';
 import type { CategoryId } from '../types';
 import { focusLabel as getFocusLabel, type TrendBucket } from '../utils/analytics';
 import {
+  ALL_ZOOM_OPTIONS,
   formatAxisDuration,
   niceTimeScale,
   roundedTopBarPath,
   Y_AXIS_WIDTH,
+  type ChartZoom,
 } from '../utils/chart';
+import {
+  computeVisibleRange,
+  shouldUpdateWindow,
+  type WindowRange,
+} from '../utils/chartWindow';
 import { formatDuration } from '../utils/time';
-
-const ZOOMS = [7, 14, 30, 90] as const;
-type Zoom = (typeof ZOOMS)[number];
 
 const BAR_HEIGHT = 132;
 const LINE_HEIGHT = 132;
@@ -50,11 +54,15 @@ interface DailyAnalysisChartsProps {
   buckets: TrendBucket[];
   maxMs: number;
   onSelectBucket: (bucket: TrendBucket) => void;
+  zoomOptions?: readonly ChartZoom[];
 }
 
 interface Segment {
   id: CategoryId;
   ms: number;
+  startMs: number;
+  endMs: number;
+  color: string;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -65,23 +73,41 @@ export function DailyAnalysisCharts({
   buckets,
   maxMs,
   onSelectBucket,
+  zoomOptions,
 }: DailyAnalysisChartsProps) {
   const { lookup } = useCategories();
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const [zoom, setZoom] = useState<Zoom>(30);
+  const options = zoomOptions?.length ? zoomOptions : ALL_ZOOM_OPTIONS;
+  const [zoom, setZoom] = useState<ChartZoom>(() =>
+    options.includes(30) ? 30 : options[options.length - 1],
+  );
   const [plotWidth, setPlotWidth] = useState(0);
-  const [scrollX, setScrollX] = useState(0);
+  const [windowRange, setWindowRange] = useState<WindowRange>({
+    first: 0,
+    last: 0,
+  });
+  const windowRef = useRef(windowRange);
+  const scrollXRef = useRef(0);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const anchorRef = useRef<number | null>(null);
 
+  const activeZoom = options.includes(zoom)
+    ? zoom
+    : options[options.length - 1];
   const totalDays = buckets.length;
-  const visibleDays = Math.min(zoom, Math.max(1, totalDays));
+  const visibleDays = Math.min(activeZoom, Math.max(1, totalDays));
   const slotWidth = plotWidth > 0 ? plotWidth / visibleDays : 0;
   const contentWidth =
     totalDays > 0 && slotWidth > 0 ? totalDays * slotWidth : plotWidth;
+  const overscan = Math.min(
+    14,
+    Math.max(7, Math.ceil(visibleDays / 2)),
+  );
   const scale = useMemo(() => niceTimeScale(maxMs), [maxMs]);
   const yMaxMs = scale.maxMs;
+  const first = windowRange.first;
+  const last = windowRange.last;
 
   const categoryOrder = useMemo(() => {
     const ids = lookup.ordered.map((category) => category.id);
@@ -96,6 +122,15 @@ export function DailyAnalysisCharts({
     });
     return ids;
   }, [buckets, lookup.ordered]);
+
+  const contentContainerStyle = useMemo(
+    () => ({ width: Math.max(contentWidth, 1) }),
+    [contentWidth],
+  );
+  const canvasStyle = useMemo(
+    () => ({ width: Math.max(contentWidth, 1), height: CHART_HEIGHT }),
+    [contentWidth],
+  );
 
   const presentCategories = useMemo(
     () =>
@@ -113,21 +148,46 @@ export function DailyAnalysisCharts({
     [buckets, categoryOrder, lookup.byId],
   );
 
-  const overscan = Math.max(visibleDays, 7);
-  const first = totalDays === 0
-    ? 0
-    : clamp(Math.floor(scrollX / Math.max(slotWidth, 1)) - overscan, 0, totalDays - 1);
-  const last = totalDays === 0
-    ? 0
-    : clamp(
-        Math.ceil((scrollX + plotWidth) / Math.max(slotWidth, 1)) + overscan,
-        0,
-        totalDays - 1,
-      );
+  const segmentData = useMemo(
+    () =>
+      buckets.map((bucket) => {
+        let cumulative = 0;
+        const segments: Segment[] = [];
+        categoryOrder.forEach((id) => {
+          const ms = bucket.categoryMs[id] ?? 0;
+          if (ms <= 0) return;
+          segments.push({
+            id,
+            ms,
+            startMs: cumulative,
+            endMs: cumulative + ms,
+            color:
+              lookup.byId.get(id)?.color ?? FALLBACK_CATEGORY.color,
+          });
+          cumulative += ms;
+        });
+        return segments;
+      }),
+    [buckets, categoryOrder, lookup.byId],
+  );
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const width = Math.round(event.nativeEvent.layout.width);
     if (width > 0 && width !== plotWidth) setPlotWidth(width);
+  };
+
+  const applyWindow = (scrollX: number) => {
+    const next = computeVisibleRange(
+      scrollX,
+      slotWidth,
+      plotWidth,
+      totalDays,
+      overscan,
+    );
+    const previous = windowRef.current;
+    if (!shouldUpdateWindow(previous, next, 4)) return;
+    windowRef.current = next;
+    setWindowRange(next);
   };
 
   const scrollToIndex = (index: number) => {
@@ -138,7 +198,16 @@ export function DailyAnalysisCharts({
       Math.max(0, contentWidth - plotWidth),
     );
     scrollRef.current.scrollTo({ x, animated: false });
-    setScrollX(x);
+    scrollXRef.current = x;
+    const next = computeVisibleRange(
+      x,
+      slotWidth,
+      plotWidth,
+      totalDays,
+      overscan,
+    );
+    windowRef.current = next;
+    setWindowRange(next);
   };
 
   useEffect(() => {
@@ -148,15 +217,26 @@ export function DailyAnalysisCharts({
     scrollToIndex(anchor);
     // Only reposition when the range or zoom changes, not on every scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalDays, zoom, plotWidth, slotWidth, contentWidth]);
+  }, [totalDays, activeZoom, plotWidth, slotWidth, contentWidth]);
 
-  const handleZoom = (next: Zoom) => {
-    if (next === zoom || totalDays === 0) return;
+  const handleZoom = (next: ChartZoom) => {
+    if (next === activeZoom || totalDays === 0 || !options.includes(next)) {
+      return;
+    }
     const center = Math.floor(
-      (scrollX + plotWidth / 2) / Math.max(slotWidth, 1),
+      (scrollXRef.current + plotWidth / 2) /
+        Math.max(slotWidth, 1),
     );
     anchorRef.current = clamp(center, 0, totalDays - 1);
     setZoom(next);
+  };
+
+  const handleScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    const x = event.nativeEvent.contentOffset.x;
+    scrollXRef.current = x;
+    applyWindow(x);
   };
 
   const yFor = useCallback(
@@ -253,8 +333,8 @@ export function DailyAnalysisCharts({
       </View>
 
       <View style={styles.zoomRow}>
-        {ZOOMS.map((value) => {
-          const selected = value === zoom;
+        {options.map((value) => {
+          const selected = value === activeZoom;
           return (
             <Pressable
               key={value}
@@ -314,15 +394,11 @@ export function DailyAnalysisCharts({
             nestedScrollEnabled
             bounces={false}
             showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={32}
-            onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) =>
-              setScrollX(event.nativeEvent.contentOffset.x)
-            }
-            contentContainerStyle={{ width: Math.max(contentWidth, 1) }}
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
+            contentContainerStyle={contentContainerStyle}
           >
-            <View
-              style={{ width: Math.max(contentWidth, 1), height: CHART_HEIGHT }}
-            >
+            <View style={canvasStyle}>
               <Svg
                 width={Math.max(contentWidth, 1)}
                 height={CHART_HEIGHT}
@@ -368,36 +444,40 @@ export function DailyAnalysisCharts({
                 {buckets.slice(first, last + 1).map((bucket, offset) => {
                   const index = first + offset;
                   if (bucket.totalMs <= 0 || yMaxMs <= 0) return null;
-                  const segments: Segment[] = categoryOrder
-                    .map((id) => ({
-                      id,
-                      ms: bucket.categoryMs[id] ?? 0,
-                    }))
-                    .filter((segment) => segment.ms > 0);
+                  const segments = segmentData[index] ?? [];
                   const barWidth = clamp(slotWidth * 0.62, 2, 24);
                   const x = index * slotWidth + (slotWidth - barWidth) / 2;
-                  let cumulative = 0;
 
                   return (
                     <G key={bucket.start}>
                       {segments.map((segment, position) => {
-                        const bottomY = yFor(cumulative, BAR_BASELINE, BAR_HEIGHT);
-                        cumulative += segment.ms;
-                        const topY = yFor(cumulative, BAR_BASELINE, BAR_HEIGHT);
+                        const bottomY = yFor(
+                          segment.startMs,
+                          BAR_BASELINE,
+                          BAR_HEIGHT,
+                        );
+                        const topY = yFor(
+                          segment.endMs,
+                          BAR_BASELINE,
+                          BAR_HEIGHT,
+                        );
                         const height = Math.max(
                           segment.ms > 0 ? 1.5 : 0,
                           bottomY - topY,
                         );
-                        const color =
-                          lookup.byId.get(segment.id)?.color ??
-                          FALLBACK_CATEGORY.color;
                         const isTop = position === segments.length - 1;
 
                         return isTop && height >= 4 ? (
                           <Path
                             key={segment.id}
-                            d={roundedTopBarPath(x, topY, barWidth, height, 3)}
-                            fill={color}
+                            d={roundedTopBarPath(
+                              x,
+                              topY,
+                              barWidth,
+                              height,
+                              3,
+                            )}
+                            fill={segment.color}
                           />
                         ) : (
                           <Rect
@@ -406,15 +486,16 @@ export function DailyAnalysisCharts({
                             y={Math.max(0, bottomY - height)}
                             width={barWidth}
                             height={height}
-                            fill={color}
+                            fill={segment.color}
                           />
                         );
                       })}
-                      {segments.slice(0, -1).map((segment, position) => {
-                        const boundary = segments
-                          .slice(0, position + 1)
-                          .reduce((sum, item) => sum + item.ms, 0);
-                        const y = yFor(boundary, BAR_BASELINE, BAR_HEIGHT);
+                      {segments.slice(0, -1).map((segment) => {
+                        const y = yFor(
+                          segment.endMs,
+                          BAR_BASELINE,
+                          BAR_HEIGHT,
+                        );
                         return (
                           <Line
                             key={`sep-${segment.id}`}

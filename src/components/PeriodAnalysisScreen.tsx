@@ -36,6 +36,10 @@ import {
   dayStart,
   nextDayStart,
 } from '../utils/time';
+import {
+  ALL_ZOOM_OPTIONS,
+  MONTH_ZOOM_OPTIONS,
+} from '../utils/chart';
 import { BucketDetailSheet } from './BucketDetailSheet';
 import { CategoryDistributionCard } from './CategoryDistributionCard';
 import { DailyAnalysisCharts } from './DailyAnalysisCharts';
@@ -243,6 +247,11 @@ export function PeriodAnalysisScreen({
               buckets={trend.buckets}
               maxMs={maxMs}
               onSelectBucket={setSelectedBucket}
+              zoomOptions={
+                mode === 'month'
+                  ? MONTH_ZOOM_OPTIONS
+                  : ALL_ZOOM_OPTIONS
+              }
             />
           </>
         )}

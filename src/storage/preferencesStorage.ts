@@ -6,6 +6,7 @@ import type {
   BackgroundKind,
   ThemeMode,
 } from '../theme/types';
+import { resolveStoredImageUri } from '../utils/imageFiles';
 import { STORAGE_KEYS } from './keys';
 
 let writeChain: Promise<unknown> = Promise.resolve();
@@ -46,17 +47,23 @@ export function normalizeAppearancePrefs(value: unknown): AppearancePrefs {
     typeof record.background === 'object' && record.background !== null
       ? (record.background as Record<string, unknown>)
       : {};
-  const kind = normalizeKind(rawBackground.kind);
+  let kind = normalizeKind(rawBackground.kind);
   const presetId =
     typeof rawBackground.presetId === 'string' &&
     getBackgroundPreset(rawBackground.presetId)
       ? rawBackground.presetId
       : undefined;
+  if (kind === 'preset' && !presetId) kind = 'theme';
   const imageUri =
     typeof rawBackground.imageUri === 'string' &&
     rawBackground.imageUri.length > 0
       ? rawBackground.imageUri
       : null;
+  const imageOpacity =
+    typeof rawBackground.imageOpacity === 'number' &&
+    Number.isFinite(rawBackground.imageOpacity)
+      ? Math.max(0.15, Math.min(1, rawBackground.imageOpacity))
+      : 0.85;
   const scrim =
     typeof rawBackground.scrim === 'number' &&
     Number.isFinite(rawBackground.scrim)
@@ -78,6 +85,7 @@ export function normalizeAppearancePrefs(value: unknown): AppearancePrefs {
       kind,
       presetId,
       imageUri,
+      imageOpacity,
       scrim,
     },
     updatedAt,
@@ -88,7 +96,21 @@ export async function loadAppearance(): Promise<AppearancePrefs> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEYS.appearance);
     if (raw == null) return { ...DEFAULT_APPEARANCE };
-    return normalizeAppearancePrefs(JSON.parse(raw) as unknown);
+    const normalized = normalizeAppearancePrefs(JSON.parse(raw) as unknown);
+    const resolved = resolveStoredImageUri(
+      normalized.background.imageUri,
+    );
+    return {
+      ...normalized,
+      background: {
+        ...normalized.background,
+        imageUri: resolved,
+        kind:
+          normalized.background.kind === 'image' && resolved === null
+            ? 'theme'
+            : normalized.background.kind,
+      },
+    };
   } catch (error) {
     console.warn('[tally] failed to read appearance', error);
     return { ...DEFAULT_APPEARANCE };

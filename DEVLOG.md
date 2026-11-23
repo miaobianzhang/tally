@@ -1,5 +1,57 @@
 # Tally 开发日志
 
+## v0.12.0 — 2026-11-23
+
+**目标**：修复头像/背景上传后重启不显示的问题；加入头像和背景裁剪、背景透明度与无极调色；去掉月分析无意义的 90 天档位并优化 7 天缩放滑动。
+
+### 新增
+
+- 新增 `imageFiles`：每次上传写入唯一文件名，支持旧容器路径/basename 恢复；只有新状态保存成功后才删除旧图。
+- 新增 `ImageCropSheet`：头像圆形取景框、背景矩形取景框；RNGH `PinchGestureHandler` + `PanGestureHandler` 双指缩放、单指拖动；裁剪前用 ImageManipulator 归一化并限制源图尺寸。
+- 新增 `BackgroundEditorSheet`：裁剪后进入模拟主页预览，滑杆调节背景图片不透明度（15%–100%），保存后才写入 AsyncStorage。
+- 首页背景新增 `imageOpacity` 字段；`HomeBackground` 统一首页与预览的图片/渐变/遮罩渲染。
+- 新增 `HorizontalSlider`（PanResponder，无新依赖），用于背景透明度和色相。
+- 自定义颜色增加 2D 饱和度/亮度色板 + 色相滑杆；应用按钮提交，拖动过程不写盘。
+- 背景预设/默认/相册 tile 增加 accent 描边和 `✓` 徽标；相册图片在切换预设后保留，点击可恢复。
+- 月分析只显示 7/14/30 天档位；自定义分析保留 90 天。
+
+### 变更
+
+- 头像/背景改为唯一文件名 + `resolveStoredImageUri`，修复固定 `avatar.jpg`/`background.jpg` 导致的 Image 缓存和重启丢失问题。
+- `ProfileEditorSheet` 改为选图 → 裁剪 → 保存；取消/保存失败不覆盖旧头像。
+- `BackgroundEditorSheet` 保存顺序为“持久化新文件 → 保存设置 → 删除旧文件”；预设切换和恢复默认外观不再删除相册图片。
+- `TimerScreen` 使用 `HomeBackground`，图片透明度由用户滑杆控制，并保留固定浅遮罩。
+- `ThemeProvider` 的 setter 返回保存成功状态；`ProfileProvider` 在写盘成功后才更新 UI，失败保持旧头像。
+- `DailyAnalysisCharts` 不再每帧 `setState(scrollX)`：滚动位置存 ref，窗口按阈值更新；overscan 从最多 7+ 降为最多 14；分类段预计算，分隔线 O(k)。
+- 版本升级到 `0.12.0`，Android `versionCode` 升级到 12，`package-lock.json` 同步。
+
+### 技术说明
+
+- 裁剪坐标由 `crop.ts` 纯函数计算：cover 比例、zoom 1–5、偏移 clamp、源图 rect 取整并保证不越界。
+- 裁剪前 `prepareCropSource` 用 `ImageManipulator.manipulate(source, {maxWidth,maxHeight})` 做解码级降采样并保存为 JPEG，解决 EXIF/大图内存问题；裁剪和展示使用同一像素空间。
+- 手势使用 RNGH 旧版 `PinchGestureHandler`/`PanGestureHandler` + RN `Animated.Value`，不引入 Reanimated/Worklets；根布局和裁剪 Modal 内都包 `GestureHandlerRootView`。
+- `imageOpacity` 缺失时默认 0.85；旧 `scrim` 继续用于预设遮罩，旧 `imageUri` 通过 basename 迁移。
+- 颜色工具新增 HSV/HEX 往返；颜色面板和色相滑杆只改本地状态，点击“应用”才提交一次。
+- 图表窗口状态使用 `computeVisibleRange`/`shouldUpdateWindow`（阈值 4 个日桶），避免滚动时每个像素触发整棵 SVG 重渲染。
+- 新增直接依赖 `react-native-gesture-handler`；根布局和裁剪 Modal 都包 `GestureHandlerRootView`，不引入 Reanimated。
+
+### 已知限制
+
+- 裁剪依赖 RNGH 旧版手势；若新架构设备出现手势异常，需要回退为缩放滑杆方案。
+- HEIC/旋转照片的裁剪方向需要真机确认；已通过 `prepareCropSource` 做初步归一化。
+- 背景裁剪按当前设备屏幕比例保存；不同比例的屏幕使用 `cover` 可能略有裁切。
+- 头像、背景、透明度和用户名仍只保存在本机，不参与同步或导出。
+- 备份/导入格式未变化；本轮不处理同步协议。
+- 月分析图表仍是全量折线 Path + 可视窗口柱，不引入虚拟列表。
+
+### 验证
+
+- 临时纯逻辑断言：裁剪源矩形（方形/宽图/zoom 1/2/边界 clamp）、HSV/HEX 往返、图表窗口与阈值；全部通过。
+- `npx tsc --noEmit`：通过。
+- `npx expo lint`：通过。
+- 待真机验证：上传/重启/替换头像和背景、预设保留、透明度预览、7 天缩放滑动、无极调色。
+- EAS `preview` Android 构建完成：版本 `0.12.0` / `versionCode 12`，APK 98,606,412 字节（94.04 MiB），SHA-256 `11C1646F61CCB85E33DD748EBDF32126AE43FA012A7F08B61D183367EC190E7D`；已确认包含 `AndroidManifest.xml`、`classes.dex` 与 `lib/arm64-v8a/` 原生库。
+
 ## v0.11.0 — 2026-11-22
 
 **目标**：加入设置中心、可自定义分类、深色模式与关键配色、首页背景和本机个人资料；支持数据导出/导入与可选的坚果云加密同步；把月分析和长区间分析改成始终按天、可缩放且日期对齐的图表。

@@ -50,7 +50,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ...patch,
         updatedAt: Date.now(),
       };
-      setProfile(next);
       try {
         const saved = await saveProfile(next);
         setProfile(saved);

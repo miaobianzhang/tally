@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { resolveStoredImageUri } from '../utils/imageFiles';
 import type { Profile } from '../types';
 import { STORAGE_KEYS } from './keys';
 
@@ -46,7 +47,11 @@ export async function loadProfile(): Promise<Profile> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEYS.profile);
     if (raw == null) return { ...DEFAULT_PROFILE };
-    return normalizeProfile(JSON.parse(raw) as unknown);
+    const profile = normalizeProfile(JSON.parse(raw) as unknown);
+    return {
+      ...profile,
+      avatarUri: resolveStoredImageUri(profile.avatarUri),
+    };
   } catch (error) {
     console.warn('[tally] failed to read profile', error);
     return { ...DEFAULT_PROFILE };

@@ -1,16 +1,12 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
-  Image,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { getBackgroundPreset } from '../theme/presets';
 
 import { useDayKey } from '../hooks/useDayKey';
 import { useProfile } from '../hooks/useProfile';
@@ -24,6 +20,7 @@ import {
   formatDateLabel,
   formatElapsed,
 } from '../utils/time';
+import { HomeBackground } from './HomeBackground';
 import { UserAvatar } from './settings/UserAvatar';
 import { TimerButton } from './TimerButton';
 
@@ -44,11 +41,8 @@ export function TimerScreen() {
       : '准备开始';
   const buttonDisabled = !hydrated || busy || isPending;
   const timerFontSize = Math.min(72, Math.max(48, width * 0.185));
-  const preset = getBackgroundPreset(background.presetId);
   const hasCustomBackground =
     background.kind === 'preset' || background.kind === 'image';
-  const scrimOpacity =
-    typeof background.scrim === 'number' ? background.scrim : 0.4;
 
   const handlePress = () => {
     if (isRunning) {
@@ -74,33 +68,7 @@ export function TimerScreen() {
       style={[styles.safe, hasCustomBackground && styles.safeTransparent]}
       edges={['top', 'left', 'right']}
     >
-      {background.kind === 'preset' && preset ? (
-        <LinearGradient
-          colors={colors.isDark ? preset.dark : preset.light}
-          style={styles.backgroundLayer}
-        />
-      ) : null}
-      {background.kind === 'image' && background.imageUri ? (
-        <Image
-          source={{ uri: background.imageUri }}
-          style={styles.backgroundLayer}
-          resizeMode="cover"
-        />
-      ) : null}
-      {hasCustomBackground ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.backgroundLayer,
-            {
-              backgroundColor: colors.isDark ? '#000000' : colors.page,
-              opacity: background.kind === 'image'
-                ? (colors.isDark ? 0.55 : 0.72)
-                : scrimOpacity * 0.35,
-            },
-          ]}
-        />
-      ) : null}
+      <HomeBackground background={background} />
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>

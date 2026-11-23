@@ -51,49 +51,69 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const commit = useCallback(async (next: AppearancePrefs) => {
-    const previous = prefsRef.current;
-    const normalized = normalizeAppearancePrefs(next);
-    prefsRef.current = normalized;
-    setPrefs(normalized);
-    try {
-      const saved = await saveAppearance(normalized);
-      prefsRef.current = saved;
-      setPrefs(saved);
-    } catch (error) {
-      console.warn('[tally] failed to save appearance', error);
-      prefsRef.current = previous;
-      setPrefs(previous);
-    }
-  }, []);
+  const commit = useCallback(
+    async (next: AppearancePrefs): Promise<boolean> => {
+      const previous = prefsRef.current;
+      const normalized = normalizeAppearancePrefs(next);
+      prefsRef.current = normalized;
+      setPrefs(normalized);
+      try {
+        const saved = await saveAppearance(normalized);
+        prefsRef.current = saved;
+        setPrefs(saved);
+        return true;
+      } catch (error) {
+        console.warn('[tally] failed to save appearance', error);
+        prefsRef.current = previous;
+        setPrefs(previous);
+        return false;
+      }
+    },
+    [],
+  );
 
   const setMode = useCallback(
-    (mode: ThemeMode) => commit({ ...prefs, mode, updatedAt: Date.now() }),
-    [commit, prefs],
+    (mode: ThemeMode) =>
+      commit({ ...prefsRef.current, mode, updatedAt: Date.now() }),
+    [commit],
   );
 
   const setColor = useCallback(
     (
       key: 'pageColor' | 'surfaceColor' | 'accentColor',
       color: string | null,
-    ) => commit({ ...prefs, [key]: color, updatedAt: Date.now() }),
-    [commit, prefs],
-  );
-
-  const setBackground = useCallback(
-    (background: BackgroundPref) =>
-      commit({ ...prefs, background, updatedAt: Date.now() }),
-    [commit, prefs],
-  );
-
-  const resetAppearance = useCallback(
-    () =>
+    ) =>
       commit({
-        ...DEFAULT_APPEARANCE,
+        ...prefsRef.current,
+        [key]: color,
         updatedAt: Date.now(),
       }),
     [commit],
   );
+
+  const setBackground = useCallback(
+    (background: BackgroundPref) =>
+      commit({
+        ...prefsRef.current,
+        background,
+        updatedAt: Date.now(),
+      }),
+    [commit],
+  );
+
+  const resetAppearance = useCallback(() => {
+    const current = prefsRef.current.background;
+    return commit({
+      ...DEFAULT_APPEARANCE,
+      background: {
+        ...DEFAULT_APPEARANCE.background,
+        imageUri: current.imageUri,
+        imageOpacity: current.imageOpacity,
+        scrim: current.scrim,
+      },
+      updatedAt: Date.now(),
+    });
+  }, [commit]);
 
   const colors = useMemo(
     () => buildThemeColors(prefs, systemScheme),

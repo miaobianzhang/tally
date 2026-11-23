@@ -270,3 +270,7 @@ export function formatAxisDuration(ms: number): string {
   const days = ms / DAY_MS;
   return Number.isInteger(days) ? `${days}d` : `${days.toFixed(1)}d`;
 }
+
+export const ALL_ZOOM_OPTIONS = [7, 14, 30, 90] as const;
+export const MONTH_ZOOM_OPTIONS = [7, 14, 30] as const;
+export type ChartZoom = (typeof ALL_ZOOM_OPTIONS)[number];

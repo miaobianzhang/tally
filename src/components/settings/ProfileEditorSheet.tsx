@@ -22,8 +22,11 @@ import { radius, spacing } from '../../theme';
 import { hapticSelection } from '../../utils/haptics';
 import {
   deleteStoredImage,
-  storePickedImage,
+  persistImage,
+  prepareCropSource,
+  type CropSource,
 } from '../../utils/imageStorage';
+import { ImageCropSheet } from './ImageCropSheet';
 import { UserAvatar } from './UserAvatar';
 
 interface ProfileEditorSheetProps {
@@ -37,6 +40,7 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
   const { profile, updateProfile } = useProfile();
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [avatarUri, setAvatarUri] = useState<string | null>(profile.avatarUri);
+  const [cropSource, setCropSource] = useState<CropSource | null>(null);
   const [busy, setBusy] = useState(false);
 
   const pickAvatar = async () => {
@@ -47,22 +51,44 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
+      quality: 1,
     });
     if (result.canceled || !result.assets[0]) return;
     setBusy(true);
     try {
-      setAvatarUri(await storePickedImage(result.assets[0].uri, 'avatar'));
-      hapticSelection();
+      setCropSource(await prepareCropSource(result.assets[0].uri));
     } catch (error) {
-      console.warn('[tally] avatar pick failed', error);
+      console.warn('[tally] avatar prepare failed', error);
       Alert.alert('头像读取失败', '请换一张图片重试。');
     } finally {
       setBusy(false);
     }
   };
 
+  const cancelCrop = () => {
+    if (cropSource) deleteStoredImage(cropSource.uri);
+    setCropSource(null);
+  };
+
+  const handleCropped = (cacheUri: string) => {
+    if (cropSource) deleteStoredImage(cropSource.uri);
+    if (avatarUri && avatarUri !== profile.avatarUri) {
+      deleteStoredImage(avatarUri);
+    }
+    setCropSource(null);
+    setAvatarUri(cacheUri);
+    hapticSelection();
+  };
+
+  const removeAvatar = () => {
+    if (avatarUri && avatarUri !== profile.avatarUri) {
+      deleteStoredImage(avatarUri);
+    }
+    setAvatarUri(null);
+  };
+
   const handleCancel = () => {
+    if (cropSource) deleteStoredImage(cropSource.uri);
     if (avatarUri && avatarUri !== profile.avatarUri) {
       deleteStoredImage(avatarUri);
     }
@@ -72,22 +98,42 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
   const handleSave = async () => {
     if (busy) return;
     setBusy(true);
-    const previous = profile.avatarUri;
-    const saved = await updateProfile({
-      displayName: displayName.trim() || 'Tally 用户',
-      avatarUri,
-    });
-    setBusy(false);
-    if (!saved) {
+    let persistedUri: string | null = null;
+    try {
+      const finalUri =
+        avatarUri && avatarUri !== profile.avatarUri
+          ? await persistImage(avatarUri, 'avatar')
+          : avatarUri;
+      if (finalUri && finalUri !== avatarUri) persistedUri = finalUri;
+
+      const saved = await updateProfile({
+        displayName: displayName.trim() || 'Tally 用户',
+        avatarUri: finalUri,
+      });
+      if (!saved) {
+        if (persistedUri) deleteStoredImage(persistedUri);
+        Alert.alert('保存失败', '请重试。');
+        return;
+      }
+      if (profile.avatarUri && profile.avatarUri !== finalUri) {
+        deleteStoredImage(profile.avatarUri);
+      }
+      if (avatarUri && avatarUri !== profile.avatarUri) {
+        deleteStoredImage(avatarUri);
+      }
+      hapticSelection();
+      onClose();
+    } catch (error) {
+      console.warn('[tally] avatar save failed', error);
+      if (persistedUri) deleteStoredImage(persistedUri);
       Alert.alert('保存失败', '请重试。');
-      return;
+    } finally {
+      setBusy(false);
     }
-    if (previous && previous !== avatarUri) deleteStoredImage(previous);
-    hapticSelection();
-    onClose();
   };
 
   return (
+    <>
     <Modal
       visible
       transparent
@@ -141,7 +187,7 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
                   {avatarUri ? (
                     <Pressable
                       accessibilityRole="button"
-                      onPress={() => setAvatarUri(null)}
+                      onPress={removeAvatar}
                       style={({ pressed }) => [
                         styles.textButton,
                         pressed && styles.pressed,
@@ -181,6 +227,15 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
         </KeyboardAvoidingView>
       </View>
     </Modal>
+      {cropSource ? (
+        <ImageCropSheet
+          source={cropSource}
+          kind="avatar"
+          onCancel={cancelCrop}
+          onCropped={handleCropped}
+        />
+      ) : null}
+    </>
   );
 }
 

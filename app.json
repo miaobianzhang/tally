@@ -3,7 +3,7 @@
     "name": "Tally",
     "slug": "tally",
     "scheme": "tally",
-    "version": "0.14.0",
+    "version": "0.14.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.tally.app",
-      "versionCode": 14,
+      "versionCode": 15,
       "adaptiveIcon": {
         "backgroundColor": "#f9f9f7",
         "foregroundImage": "./assets/android-icon-foreground.png",

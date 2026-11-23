@@ -275,14 +275,29 @@ export function DailyAnalysisCharts({
     return result;
   }, [first, last, totalDays]);
 
+  const allMarkerIndices = useMemo(
+    () => Array.from({ length: totalDays }, (_, index) => index),
+    [totalDays],
+  );
+
   const markerIndices = useMemo(() => {
     if (activeZoom !== 7 || totalDays === 0) return labelIndices;
+    // Month view is at most 31 days. Render every point once so scrolling
+    // never adds or removes markers (which made the dots flicker).
+    if (totalDays <= 62) return allMarkerIndices;
     const result: number[] = [];
     for (let index = Math.max(0, first); index <= last; index += 1) {
       result.push(index);
     }
     return result;
-  }, [activeZoom, first, labelIndices, last, totalDays]);
+  }, [
+    activeZoom,
+    allMarkerIndices,
+    first,
+    labelIndices,
+    last,
+    totalDays,
+  ]);
 
   const totalPath = useMemo(() => {
     if (buckets.length < 2) return '';
@@ -553,12 +568,13 @@ export function DailyAnalysisCharts({
                     LINE_BASELINE,
                     LINE_HEIGHT,
                   );
+                  const markerRadius = activeZoom === 7 ? 4 : 3;
                   return (
                     <G key={`marker-${bucket.start}`}>
                       <Circle
                         cx={x}
                         cy={totalY}
-                        r={3}
+                        r={markerRadius}
                         fill={colors.surface}
                         stroke={colors.textSecondary}
                         strokeWidth={2}
@@ -566,7 +582,7 @@ export function DailyAnalysisCharts({
                       <Circle
                         cx={x}
                         cy={studyY}
-                        r={3}
+                        r={markerRadius}
                         fill={colors.text}
                         stroke={colors.surface}
                         strokeWidth={2}

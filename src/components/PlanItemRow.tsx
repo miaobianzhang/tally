@@ -158,7 +158,7 @@ export function PlanItemRow({
   ]);
 
   const handleToggle = async () => {
-    const saved = await toggleComplete(plan.id, !reduceMotion);
+    const saved = await toggleComplete(plan.id);
     if (saved) {
       hapticSelection();
     } else {
@@ -247,15 +247,29 @@ export function PlanItemRow({
           pressed && !completed && styles.pressed,
         ]}
       >
-        <Text
-          numberOfLines={2}
-          style={[
-            styles.title,
-            completed && styles.titleDone,
-          ]}
-        >
-          {plan.title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.title,
+              completed && styles.titleDone,
+            ]}
+          >
+            {plan.title}
+          </Text>
+          {countdown ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.deadlineCountdown,
+                { color: dueColor },
+                completed && styles.metaDone,
+              ]}
+            >
+              {countdown}
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.metaRow}>
           <View
             style={[
@@ -273,18 +287,6 @@ export function PlanItemRow({
           >
             {meta}
           </Text>
-          {countdown ? (
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.deadlineCountdown,
-                { color: dueColor },
-                completed && styles.metaDone,
-              ]}
-            >
-              {countdown}
-            </Text>
-          ) : null}
         </View>
       </Pressable>
 
@@ -372,7 +374,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 2,
     paddingRight: spacing.sm,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   title: {
+    flex: 1,
     fontSize: 15,
     lineHeight: 21,
     fontWeight: '500',
@@ -384,9 +392,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   deadlineCountdown: {
     flexShrink: 0,
-    marginLeft: 8,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
     textAlign: 'right',

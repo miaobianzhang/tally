@@ -40,12 +40,12 @@ jobs:
             --profile preview \
             --local \
             --non-interactive \
-            --output "$GITHUB_WORKSPACE/tally-0.14.0.apk"
+            --output "$GITHUB_WORKSPACE/tally-0.14.1.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tally-0.14.0-apk
-          path: tally-0.14.0.apk
+          name: tally-0.14.1-apk
+          path: tally-0.14.1.apk
           if-no-files-found: error
           retention-days: 14

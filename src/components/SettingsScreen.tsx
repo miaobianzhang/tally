@@ -43,6 +43,7 @@ import { mergeSnapshots } from '../sync/merge';
 import { replaceCategories } from '../storage/categoryStorage';
 import { replaceSessions, savePrefs } from '../storage/tallyStorage';
 import { replacePlanItems, savePlanPrefs } from '../storage/planStorage';
+import { AnimatedReorderRow } from './AnimatedReorderRow';
 import { BackgroundEditorSheet } from './settings/BackgroundEditorSheet';
 import { CategoryEditorSheet } from './settings/CategoryEditorSheet';
 import { ColorChoiceSheet } from './settings/ColorChoiceSheet';
@@ -243,7 +244,7 @@ export function SettingsScreen() {
     id: string,
     direction: -1 | 1,
   ) => {
-    const moved = await moveCategory(id, direction, !reduceMotion);
+    const moved = await moveCategory(id, direction);
     if (moved) {
       hapticSelection();
     } else {
@@ -263,8 +264,12 @@ export function SettingsScreen() {
       order.index >= order.total - 1;
 
     return (
-      <View key={category.id} style={styles.categoryRow}>
-        <Pressable
+      <AnimatedReorderRow
+        key={category.id}
+        reduceMotion={reduceMotion}
+      >
+        <View style={styles.categoryRow}>
+          <Pressable
           accessibilityRole="button"
           accessibilityLabel={`编辑分类 ${category.label}${category.archived ? '，已停用' : ''}`}
           onPress={() => setEditingCategory(category)}
@@ -338,7 +343,8 @@ export function SettingsScreen() {
         ) : null}
 
         <Text style={styles.chevron}>›</Text>
-      </View>
+        </View>
+      </AnimatedReorderRow>
     );
   };
 
@@ -697,7 +703,7 @@ export function SettingsScreen() {
           </Pressable>
         </Section>
 
-        <Section title="关于" hint="Tally 0.14.0 · 数据保存在本机">
+        <Section title="关于" hint="Tally 0.14.1 · 数据保存在本机">
           <Text style={styles.aboutText}>
             所有记录默认只保存在这台设备。开启坚果云同步后，数据会先加密再上传。
           </Text>

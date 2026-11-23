@@ -1,5 +1,43 @@
 # Tally 开发日志
 
+## v0.14.1 — 2026-11-24
+
+**目标**：修复 v0.14.0 真机反馈：计划和分类重排没有移动动画；月分析 7 天档位看不到每日圆点；Deadline 倒计时与标题不对齐且字号偏大。
+
+### 新增
+
+- 新增 `AnimatedReorderRow`：用 Reanimated `LinearTransition` 驱动行位置变化，替代不生效的 RN `LayoutAnimation`。
+- `react-native-reanimated` / `react-native-worklets` 提升为直接依赖（v0.14 APK 已包含对应原生库）。
+
+### 变更
+
+- 计划完成/取消完成、分类 ↑ / ↓ 排序都通过 Reanimated 布局过渡移动；Reduce Motion 开启时禁用过渡。
+- 删除 `src/utils/layoutAnimation.ts`，移除 `toggleComplete` / `commit` / `moveCategory` 上不再需要的 `animate` 参数。
+- 月分析 7 天档位直接渲染整月所有日期的圆点，不再依赖滚动/缩放窗口，圆点数量稳定、不闪烁；圆点半径从 3 提高到 4。
+- Deadline 倒计时移入标题行右侧，与标题第一行同高；字号从 16 降到 14，仍无外框，大于最初 11。
+- 版本升级到 `0.14.1`，Android `versionCode` 升级到 15，`package-lock.json` 同步。
+
+### 技术说明
+
+- `LayoutAnimation.configureNext` 在 RN 0.88 / Fabric 下没有产生可见的行重排效果；Reanimated 布局过渡由原生视图布局变化驱动，不依赖全局动画配置时机。
+- `AnimatedReorderRow` 只包裹行本身，保持 `plan.id` / `category.id` 作为 key；`LinearTransition.duration(220)` 只做位置过渡。
+- 7 天圆点的 `allMarkerIndices` 使用 `totalDays` 作为唯一依赖，窗口滚动时圆点数组身份不变；月分析最多 31 天，因此不会抖动。
+- 标题行使用 `alignItems: 'flex-start'`，倒计时 `lineHeight: 21` 与标题行高一致，长标题换行时倒计时保持在第一行右侧。
+
+### 已知限制
+
+- Reanimated 布局过渡依赖原生库，必须重新构建 APK；Expo Go 开发版也包含 Reanimated。
+- 超过 62 天的自定义区间在 7 天档位仍只渲染当前窗口圆点，避免上千个 SVG 节点。
+- Deadline 字号 14 是 11 与 16 的折中，仍可按真机观感微调。
+
+### 验证
+
+- `npx tsc --noEmit`：通过。
+- `npx expo lint`：通过。
+- `npx expo export --platform android`：通过。
+- `npx expo-doctor`：20/20 通过。
+- 待真机验证：完成/取消计划移动、分类排序移动、减少动态效果、7 天圆点稳定、Deadline 标题对齐。
+
 ## v0.14.0 — 2026-11-23
 
 **目标**：精简 Deadline 倒计时；为计划完成和分类排序加入移动动画；修复月分析 7 天档位折线圆点缺失；在周分析中加入固定 7 天分类堆叠柱状图。

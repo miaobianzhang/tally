@@ -35,6 +35,7 @@ import {
   plansForPeriod,
   sortPlansForSection,
 } from '../utils/plans';
+import { AnimatedReorderRow } from './AnimatedReorderRow';
 import { PeriodSwitcher } from './PeriodSwitcher';
 import { PlanItemRow } from './PlanItemRow';
 import { PlanItemSheet } from './PlanItemSheet';
@@ -192,15 +193,19 @@ export function PlanScreen() {
     }
 
     return rows.map((plan) => (
-      <PlanItemRow
+      <AnimatedReorderRow
         key={plan.id}
-        plan={plan}
-        now={now}
-        busy={plansBusy}
         reduceMotion={reduceMotion}
-        onStart={startPlan}
-        onEdit={openEdit}
-      />
+      >
+        <PlanItemRow
+          plan={plan}
+          now={now}
+          busy={plansBusy}
+          reduceMotion={reduceMotion}
+          onStart={startPlan}
+          onEdit={openEdit}
+        />
+      </AnimatedReorderRow>
     ));
   };
 

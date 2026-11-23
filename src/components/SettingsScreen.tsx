@@ -20,6 +20,7 @@ import { useCategories } from '../hooks/useCategories';
 import { loadTombstones, saveTombstones } from '../storage/tombstoneStorage';
 import { usePlans } from '../hooks/usePlans';
 import { useProfile } from '../hooks/useProfile';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useSync } from '../hooks/useSync';
 import { useTally } from '../hooks/useTally';
 import { useTheme } from '../theme/ThemeProvider';
@@ -60,6 +61,7 @@ export function SettingsScreen() {
   const { colors, prefs, setMode, setColor, setBackground, resetAppearance } =
     useTheme();
   const styles = useThemedStyles(createStyles);
+  const reduceMotion = useReduceMotion();
   const { profile } = useProfile();
   const {
     categories,
@@ -241,7 +243,7 @@ export function SettingsScreen() {
     id: string,
     direction: -1 | 1,
   ) => {
-    const moved = await moveCategory(id, direction);
+    const moved = await moveCategory(id, direction, !reduceMotion);
     if (moved) {
       hapticSelection();
     } else {
@@ -695,7 +697,7 @@ export function SettingsScreen() {
           </Pressable>
         </Section>
 
-        <Section title="关于" hint="Tally 0.13.0 · 数据保存在本机">
+        <Section title="关于" hint="Tally 0.14.0 · 数据保存在本机">
           <Text style={styles.aboutText}>
             所有记录默认只保存在这台设备。开启坚果云同步后，数据会先加密再上传。
           </Text>

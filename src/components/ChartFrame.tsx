@@ -35,6 +35,8 @@ interface ChartFrameProps {
   maxMs: number;
   children: (frame: ChartFrameData) => ReactNode;
   overlay?: (frame: ChartFrameData) => ReactNode;
+  /** Fit all buckets into the viewport instead of enabling horizontal scroll. */
+  fitContent?: boolean;
 }
 
 export function ChartFrame({
@@ -42,6 +44,7 @@ export function ChartFrame({
   maxMs,
   children,
   overlay,
+  fitContent = false,
 }: ChartFrameProps) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -52,6 +55,7 @@ export function ChartFrame({
     containerWidth,
     buckets.length,
     granularity,
+    fitContent,
   );
   const scale = niceTimeScale(maxMs);
   const frame: ChartFrameData = {
@@ -88,7 +92,7 @@ export function ChartFrame({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          scrollEnabled={metrics.scrollable}
+          scrollEnabled={!fitContent && metrics.scrollable}
           bounces={false}
           style={styles.scroll}
           contentContainerStyle={{ width: metrics.contentWidth }}

@@ -37,11 +37,12 @@ export function computeChartMetrics(
   containerWidth: number,
   bucketCount: number,
   granularity: Granularity,
+  fitContent = false,
 ): ChartMetrics {
   const viewportWidth = Math.max(0, containerWidth - Y_AXIS_WIDTH);
   const minSlotWidth = granularity === 'week' ? 32 : 24;
   const contentWidth =
-    bucketCount > 0
+    bucketCount > 0 && !fitContent
       ? Math.max(viewportWidth, bucketCount * minSlotWidth)
       : viewportWidth;
   const slotWidth = bucketCount > 0 ? contentWidth / bucketCount : 0;
@@ -61,7 +62,7 @@ export function computeChartMetrics(
     slotWidth,
     barWidth,
     xLabelHeight: X_LABEL_HEIGHT,
-    scrollable: contentWidth > viewportWidth + 0.5,
+    scrollable: !fitContent && contentWidth > viewportWidth + 0.5,
   };
 }
 

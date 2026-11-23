@@ -29,6 +29,7 @@ import {
   normalizeCategoryLabel,
   normalizeColor,
 } from '../utils/categoryValidation';
+import { animateNextLayoutChange } from '../utils/layoutAnimation';
 
 interface AddCategoryInput {
   label: string;
@@ -55,6 +56,7 @@ interface CategoryContextValue {
   moveCategory: (
     id: CategoryId,
     direction: -1 | 1,
+    animate?: boolean,
   ) => Promise<boolean>;
   ensureReferencedCategories: (ids: readonly CategoryId[]) => Promise<void>;
   resolveCategory: (id: CategoryId) => CategoryDefinition;
@@ -86,22 +88,26 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const commit = useCallback(async (next: CategoryDefinition[]) => {
-    const previous = categoriesRef.current;
-    categoriesRef.current = next;
-    setCategories(next);
-    try {
-      const saved = await replaceCategories(next);
-      categoriesRef.current = saved;
-      setCategories(saved);
-      return true;
-    } catch (error) {
-      console.warn('[tally] failed to save categories', error);
-      categoriesRef.current = previous;
-      setCategories(previous);
-      return false;
-    }
-  }, []);
+  const commit = useCallback(
+    async (next: CategoryDefinition[], animate = false) => {
+      const previous = categoriesRef.current;
+      if (animate) animateNextLayoutChange();
+      categoriesRef.current = next;
+      setCategories(next);
+      try {
+        const saved = await replaceCategories(next);
+        categoriesRef.current = saved;
+        setCategories(saved);
+        return true;
+      } catch (error) {
+        console.warn('[tally] failed to save categories', error);
+        categoriesRef.current = previous;
+        setCategories(previous);
+        return false;
+      }
+    },
+    [],
+  );
 
   const lookup = useMemo(() => createCategoryLookup(categories), [categories]);
   const activeCategories = useMemo(
@@ -286,7 +292,11 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
   );
 
   const moveCategory = useCallback(
-    async (id: CategoryId, direction: -1 | 1) => {
+    async (
+      id: CategoryId,
+      direction: -1 | 1,
+      animate = false,
+    ) => {
       if (busyRef.current) return false;
       const current = categoriesRef.current;
       const active = current
@@ -330,7 +340,7 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       busyRef.current = true;
       setBusy(true);
       try {
-        return await commit(next);
+        return await commit(next, animate);
       } finally {
         busyRef.current = false;
         setBusy(false);

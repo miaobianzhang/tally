@@ -275,6 +275,15 @@ export function DailyAnalysisCharts({
     return result;
   }, [first, last, totalDays]);
 
+  const markerIndices = useMemo(() => {
+    if (activeZoom !== 7 || totalDays === 0) return labelIndices;
+    const result: number[] = [];
+    for (let index = Math.max(0, first); index <= last; index += 1) {
+      result.push(index);
+    }
+    return result;
+  }, [activeZoom, first, labelIndices, last, totalDays]);
+
   const totalPath = useMemo(() => {
     if (buckets.length < 2) return '';
     return buckets
@@ -534,6 +543,38 @@ export function DailyAnalysisCharts({
                   />
                 ) : null}
 
+                {markerIndices.map((index) => {
+                  const bucket = buckets[index];
+                  if (!bucket) return null;
+                  const x = index * slotWidth + slotWidth / 2;
+                  const totalY = yFor(bucket.totalMs, LINE_BASELINE, LINE_HEIGHT);
+                  const studyY = yFor(
+                    bucket.studyWorkMs,
+                    LINE_BASELINE,
+                    LINE_HEIGHT,
+                  );
+                  return (
+                    <G key={`marker-${bucket.start}`}>
+                      <Circle
+                        cx={x}
+                        cy={totalY}
+                        r={3}
+                        fill={colors.surface}
+                        stroke={colors.textSecondary}
+                        strokeWidth={2}
+                      />
+                      <Circle
+                        cx={x}
+                        cy={studyY}
+                        r={3}
+                        fill={colors.text}
+                        stroke={colors.surface}
+                        strokeWidth={2}
+                      />
+                    </G>
+                  );
+                })}
+
                 {labelIndices.map((index) => {
                   const bucket = buckets[index];
                   if (!bucket) return null;
@@ -551,23 +592,7 @@ export function DailyAnalysisCharts({
                         ? 'end'
                         : 'middle';
                   return (
-                    <G key={`point-${bucket.start}`}>
-                      <Circle
-                        cx={x}
-                        cy={totalY}
-                        r={3}
-                        fill={colors.surface}
-                        stroke={colors.textSecondary}
-                        strokeWidth={2}
-                      />
-                      <Circle
-                        cx={x}
-                        cy={studyY}
-                        r={3}
-                        fill={colors.text}
-                        stroke={colors.surface}
-                        strokeWidth={2}
-                      />
+                    <G key={`label-${bucket.start}`}>
                       <SvgText
                         x={x}
                         y={Math.max(10, studyY - 7)}

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { G, Line, Path, Rect } from 'react-native-svg';
 
@@ -19,21 +20,39 @@ interface StackedBarChartProps {
   buckets: TrendBucket[];
   maxMs: number;
   onSelectBucket?: (bucket: TrendBucket) => void;
+  /** Fit all buckets into the visible width; no horizontal scrolling. */
+  fitContent?: boolean;
 }
 
 export function StackedBarChart({
   buckets,
   maxMs,
   onSelectBucket,
+  fitContent = false,
 }: StackedBarChartProps) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { lookup } = useCategories();
 
+  const categoryOrder = useMemo(() => {
+    const ids = lookup.ordered.map((category) => category.id);
+    const seen = new Set(ids);
+    buckets.forEach((bucket) => {
+      Object.keys(bucket.categoryMs).forEach((id) => {
+        if (!seen.has(id)) {
+          seen.add(id);
+          ids.push(id);
+        }
+      });
+    });
+    return ids;
+  }, [buckets, lookup.ordered]);
+
   return (
     <ChartFrame
       buckets={buckets}
       maxMs={maxMs}
+      fitContent={fitContent}
       overlay={({ metrics }) =>
         onSelectBucket ? (
           <View style={StyleSheet.absoluteFill}>
@@ -71,8 +90,11 @@ export function StackedBarChart({
           {buckets.map((bucket, bucketIndex) => {
             if (bucket.totalMs <= 0 || yMaxMs <= 0) return null;
 
-            const visible = Object.entries(bucket.categoryMs)
-              .map(([categoryId, ms]) => ({ ms, categoryId }))
+            const visible = categoryOrder
+              .map((categoryId) => ({
+                categoryId,
+                ms: bucket.categoryMs[categoryId] ?? 0,
+              }))
               .filter((segment) => segment.ms > 0);
             const topPosition = visible.length - 1;
             const x =

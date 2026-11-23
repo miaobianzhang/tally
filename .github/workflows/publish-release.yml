@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: GitHub Actions run ID containing tally-0.13.0-apk
+        description: GitHub Actions run ID containing tally-0.14.0-apk
         required: true
 
 permissions:
@@ -24,17 +24,17 @@ jobs:
         run: |
           gh run download "${{ inputs.run_id }}" \
             --repo "${{ github.repository }}" \
-            --name tally-0.13.0-apk \
+            --name tally-0.14.0-apk \
             --dir apk
-          test -f apk/tally-0.13.0.apk
+          test -f apk/tally-0.14.0.apk
 
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.13.0 \
+          gh release create v0.14.0 \
             --repo "${{ github.repository }}" \
             --draft \
-            --title "Tally v0.13.0" \
-            --notes-file .github/release-notes/v0.13.0.md \
-            apk/tally-0.13.0.apk
+            --title "Tally v0.14.0" \
+            --notes-file .github/release-notes/v0.14.0.md \
+            apk/tally-0.14.0.apk

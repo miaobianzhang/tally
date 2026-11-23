@@ -36,6 +36,7 @@ import { EffectiveTimeTrendCard } from './EffectiveTimeTrendCard';
 import { OverviewStats } from './OverviewStats';
 import { PeriodSwitcher } from './PeriodSwitcher';
 import { TimelineBoard } from './TimelineBoard';
+import { WeeklyDailyBarCard } from './WeeklyDailyBarCard';
 
 function goBack() {
   if (router.canGoBack()) {
@@ -180,6 +181,12 @@ export function WeeklyScreen() {
             <CategoryDistributionCard
               categories={breakdown.categories}
               totalMs={breakdown.totalMs}
+            />
+
+            <WeeklyDailyBarCard
+              buckets={trend.buckets}
+              maxMs={maxMs}
+              categories={breakdown.categories}
             />
 
             <EffectiveTimeTrendCard

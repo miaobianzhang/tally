@@ -13,7 +13,6 @@ import { useCategories } from '../hooks/useCategories';
 import { usePlans } from '../hooks/usePlans';
 import { useTheme } from '../theme/ThemeProvider';
 import { useThemedStyles } from '../theme/useThemedStyles';
-import { pickReadableText } from '../theme/derive';
 import type { ThemeColors } from '../theme/types';
 import { spacing } from '../theme';
 import type { PlanItem } from '../types';
@@ -159,7 +158,7 @@ export function PlanItemRow({
   ]);
 
   const handleToggle = async () => {
-    const saved = await toggleComplete(plan.id);
+    const saved = await toggleComplete(plan.id, !reduceMotion);
     if (saved) {
       hapticSelection();
     } else {
@@ -176,17 +175,6 @@ export function PlanItemRow({
       Alert.alert('删除失败', '请重试。');
     }
   };
-
-  const badgeBackground = completed
-    ? colors.rangeTint
-    : tone === 'overdue'
-      ? colors.danger
-      : tone === 'today'
-        ? colors.running
-        : colors.accent;
-  const badgeTextColor = completed
-    ? colors.muted
-    : pickReadableText(badgeBackground);
 
   const meta = [category.label, dueText].filter(Boolean).join(' · ');
   const startLabel = `开始计时：${plan.title}，${category.label}${dueText ? `，${dueText}` : ''}${countdown ? `，${countdown}` : ''}`;
@@ -286,21 +274,16 @@ export function PlanItemRow({
             {meta}
           </Text>
           {countdown ? (
-            <View
+            <Text
+              numberOfLines={1}
               style={[
-                styles.deadlineBadge,
-                { backgroundColor: badgeBackground },
+                styles.deadlineCountdown,
+                { color: dueColor },
+                completed && styles.metaDone,
               ]}
             >
-              <Text
-                style={[
-                  styles.deadlineBadgeText,
-                  { color: badgeTextColor },
-                ]}
-              >
-                {countdown}
-              </Text>
-            </View>
+              {countdown}
+            </Text>
           ) : null}
         </View>
       </Pressable>
@@ -399,17 +382,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textDecorationLine: 'line-through',
     color: colors.muted,
   },
-  deadlineBadge: {
+  deadlineCountdown: {
     flexShrink: 0,
-    marginLeft: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  deadlineBadgeText: {
-    fontSize: 11,
-    lineHeight: 15,
+    marginLeft: 8,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    textAlign: 'right',
   },
   metaRow: {
     flexDirection: 'row',

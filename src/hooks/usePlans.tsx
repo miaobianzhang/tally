@@ -30,6 +30,7 @@ import {
   startOfWeekMonday,
 } from '../utils/dateRange';
 import { createId } from '../utils/id';
+import { animateNextLayoutChange } from '../utils/layoutAnimation';
 import {
   movePlanSection,
   normalizePlanTitle,
@@ -57,7 +58,10 @@ interface PlanContextValue {
   prefs: PlanPrefs;
   addPlan: (input: NewPlanInput) => Promise<boolean>;
   updatePlan: (id: string, patch: PlanUpdate) => Promise<boolean>;
-  toggleComplete: (id: string) => Promise<boolean>;
+  toggleComplete: (
+    id: string,
+    animate?: boolean,
+  ) => Promise<boolean>;
   removePlan: (id: string) => Promise<boolean>;
   setSectionVisible: (
     section: PlanSection,
@@ -203,7 +207,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleComplete = useCallback(
-    async (id: string): Promise<boolean> => {
+    async (id: string, animate = false): Promise<boolean> => {
       if (!hydrated || busyRef.current) return false;
 
       const existing = items.find((item) => item.id === id);
@@ -221,6 +225,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
       try {
         const next = await upsertPlanItem(nextItem);
+        if (animate) animateNextLayoutChange();
         setItems(next);
         return true;
       } catch (error) {

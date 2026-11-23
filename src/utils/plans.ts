@@ -141,7 +141,7 @@ export function deadlineLabel(
   const diff = calendarDayDifference(dayStart(now), plan.dueAt);
   if (diff === 0) return '今天截止';
   if (diff < 0) return `逾期 ${Math.abs(diff)} 天`;
-  return `还剩 ${diff} 天`;
+  return `${diff} 天`;
 }
 
 export function deadlineDateLabel(plan: PlanItem): string {

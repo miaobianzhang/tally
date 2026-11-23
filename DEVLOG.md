@@ -27,6 +27,8 @@
 - 分类重排只在使用中分类之间进行：重新生成 0..n-1 的 `order`，并把已停用/已删除分类排在后面；同步合并仍按 `updatedAt` 取较新记录。
 - 动画使用 React Native `Animated` + `useNativeDriver`，不引入新依赖；动画只在完成状态从 false 变为 true 时播放，初始已完成的计划不会重播。
 - 键盘修复把 `ProfileEditorSheet` 的 `KeyboardAvoidingView` 从“仅 iOS padding”改为全平台 `padding`，与计划编辑弹窗一致。
+- 新增 `.github/workflows/android-preview.yml`：GitHub Actions Ubuntu runner 执行 `eas build --local`，不占用 EAS 云端构建额度，仍使用 EAS 托管的原签名证书。
+- 新增 `.github/workflows/publish-release.yml`：从已完成的构建 artifact 上传 APK 到 draft Release，避免在本机慢速上传 94 MiB 文件。
 
 ### 已知限制
 
@@ -41,7 +43,9 @@
 - `npx expo lint`：通过。
 - `npx expo export --platform android`：通过。
 - `npx expo-doctor`：20/20 通过。
-- EAS `preview` 构建：本次账号的免费 Android 构建额度已用完，构建在排队前被拒绝；未生成 v0.13.0 APK，需等额度重置后重新构建。
+- EAS 云端 `preview` 构建因当月免费额度用完被拒绝；改用 GitHub Actions `eas build --local` 成功构建，未消耗 EAS 云额度。
+- GitHub Actions 构建成功：18 分 47 秒，使用 EAS 托管签名证书 `Build Credentials F-REDTuMCn (default)`。
+- v0.13.0 APK：98,615,392 字节（94.05 MiB），SHA-256 `4D2BE15DD404283A573444FC680CC655D7137D1E816CE85D6C9362DE09A87B80`；构建 artifact zip 的 SHA-256 与 Actions 日志一致。
 - 待真机验证：Deadline 徽标、完成动画、删除按钮、分类删除/排序、用户名输入法避让。
 
 ## v0.12.0 — 2026-11-23

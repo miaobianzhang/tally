@@ -40,7 +40,7 @@ v0.13.0 让 Deadline 的剩余天数更醒目，已完成计划可直接删除�
 
 ## 版本
 
-当前源码版本 `0.13.0`，Android 包名 `com.tally.app`，versionCode `13`。GitHub Releases 上最新公开 APK 仍为 v0.12.0；v0.13.0 安装包待下一次 EAS 构建后更新。
+当前版本 `0.13.0`，Android 包名 `com.tally.app`，versionCode `13`。
 
 ## 环境要求
 
@@ -50,27 +50,31 @@ v0.13.0 让 Deadline 的剩余天数更醒目，已完成计划可直接删除�
 
 ## 安装到 Android 手机
 
-应用通过 EAS 云端构建为独立 APK（包名 `com.tally.app`）。在手机浏览器打开构建产物的下载链接，允许“安装未知来源应用”后安装即可；安装完成后桌面会出现 Tally 图标。
+应用通过 EAS 构建为独立 APK（包名 `com.tally.app`）。在手机浏览器打开下载链接，允许“安装未知来源应用”后安装即可；安装完成后桌面会出现 Tally 图标。
 
 从 GitHub Releases 下载最新 APK：
 
 https://github.com/miaobianzhang/tally/releases/latest
 
-最新公开 APK（v0.12.0）：98,606,412 字节 / 94.04 MiB
+最新 APK（v0.13.0）：98,615,392 字节 / 94.05 MiB
 
-SHA-256：`11C1646F61CCB85E33DD748EBDF32126AE43FA012A7F08B61D183367EC190E7D`
+SHA-256：`4D2BE15DD404283A573444FC680CC655D7137D1E816CE85D6C9362DE09A87B80`
 
-构建页：https://expo.dev/accounts/miaobianzhang/projects/tally/builds/c9364db2-b45c-4cf6-8c6c-3e8092daa7d0
+构建记录：https://github.com/miaobianzhang/tally/actions/runs/45180724728
 
-Release 附件由 GitHub 长期托管，下载不需要 GitHub 账号；EAS 的临时构建链接约 14 天后失效，不再作为主要下载渠道。
+Release 附件由 GitHub 长期托管，下载不需要 GitHub 账号。本版 APK 通过 GitHub Actions 在 Ubuntu runner 上执行 `eas build --local` 构建，使用原有 EAS 托管签名证书，不消耗 EAS 云端构建额度。
 
 重新构建 APK：
 
 ```bash
-npx eas-cli@latest build -p android --profile preview
+# 方式一：GitHub Actions 本地构建（不占 EAS 云额度）
+gh workflow run android-preview.yml --ref main -R miaobianzhang/tally
+
+# 方式二：EAS 云端构建（会消耗当月免费构建额度）
+EAS_NO_VCS=1 npx eas-cli@latest build -p android --profile preview
 ```
 
-EAS 构建使用 `EAS_NO_VCS=1`（PowerShell：`$env:EAS_NO_VCS = '1'`）。`preview` profile 输出可直接安装的 APK；每次重新构建前请递增 `app.json` 中的 `android.versionCode`，否则手机可能拒绝覆盖安装。签名密钥由 EAS 托管，请保留 `miaobianzhang` 账号的访问权限。
+GitHub Actions 方式需要先把 Expo access token 写入仓库 Secret `EXPO_TOKEN`；构建结束后可撤销 token 并删除 Secret。方式二的 `preview` profile 输出可直接安装的 APK。每次重新构建前请递增 `app.json` 中的 `android.versionCode`，否则手机可能拒绝覆盖安装。签名密钥由 EAS 托管，请保留 `miaobianzhang` 账号的访问权限。
 
 ## 可选云同步（坚果云 WebDAV）
 

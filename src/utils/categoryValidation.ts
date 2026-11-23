@@ -41,6 +41,7 @@ export function isCategoryDefinition(
     record.label.length > 0 &&
     isHexColor(record.color) &&
     typeof record.archived === 'boolean' &&
+    (record.deleted === undefined || typeof record.deleted === 'boolean') &&
     typeof record.countsAsFocus === 'boolean' &&
     isFiniteNumber(record.order) &&
     isFiniteNumber(record.createdAt) &&
@@ -73,10 +74,13 @@ export function normalizeCategoryState(
     if (!isCategoryDefinition(item)) return;
     const label = normalizeCategoryLabel(item.label);
     if (!label) return;
+    const deleted = item.deleted === true;
     byId.set(item.id, {
       ...item,
       label,
       color: normalizeColor(item.color, FALLBACK_CATEGORY.color),
+      archived: deleted ? true : item.archived,
+      deleted: deleted || undefined,
     });
   });
 
@@ -109,10 +113,12 @@ export function normalizeCategoryState(
 
   if (categories.length === 0) return createSeedCategories();
 
-  const active = categories.filter((category) => !category.archived);
+  const visible = categories.filter((category) => !category.deleted);
+  const active = visible.filter((category) => !category.archived);
   if (active.length === 0) {
-    const first = categories[0];
+    const first = visible[0] ?? categories[0];
     first.archived = false;
+    first.deleted = undefined;
     first.updatedAt = Date.now();
   }
 

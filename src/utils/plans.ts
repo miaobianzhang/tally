@@ -140,8 +140,10 @@ export function deadlineLabel(
 
   const diff = calendarDayDifference(dayStart(now), plan.dueAt);
   if (diff === 0) return '今天截止';
-  if (diff === 1) return '明天截止';
-  if (diff < 0) return `已逾期 ${Math.abs(diff)} 天`;
-  if (diff <= 7) return `${diff} 天后`;
-  return formatFullDateWithYear(plan.dueAt);
+  if (diff < 0) return `逾期 ${Math.abs(diff)} 天`;
+  return `还剩 ${diff} 天`;
+}
+
+export function deadlineDateLabel(plan: PlanItem): string {
+  return plan.dueAt === null ? '' : formatFullDateWithYear(plan.dueAt);
 }

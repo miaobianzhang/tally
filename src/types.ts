@@ -20,6 +20,8 @@ export interface CategoryDefinition {
   label: string;
   color: string;
   archived: boolean;
+  /** Hidden from settings and pickers, but kept so history resolves. */
+  deleted?: boolean;
   countsAsFocus: boolean;
   order: number;
   createdAt: number;

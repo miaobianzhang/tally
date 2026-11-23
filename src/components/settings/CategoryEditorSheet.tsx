@@ -41,6 +41,7 @@ export function CategoryEditorSheet({
     updateCategory,
     archiveCategory,
     restoreCategory,
+    deleteCategory,
     busy,
   } = useCategories();
   const [label, setLabel] = useState(category?.label ?? '');
@@ -86,6 +87,34 @@ export function CategoryEditorSheet({
     }
     hapticSelection();
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (!category || busy) return;
+    Alert.alert(
+      '删除分类',
+      `确定删除「${category.label}」？删除后它不会再出现在分类列表和选择器中，已有记录仍保留原分类名称和颜色。`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () => {
+            void deleteCategory(category.id).then((ok) => {
+              if (ok) {
+                hapticSelection();
+                onClose();
+              } else {
+                Alert.alert(
+                  '无法删除',
+                  '至少需要保留一个可用分类。',
+                );
+              }
+            });
+          },
+        },
+      ],
+    );
   };
 
   const handleArchiveToggle = () => {
@@ -247,6 +276,22 @@ export function CategoryEditorSheet({
                 </Text>
               </Pressable>
             ) : null}
+
+            {category ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="删除分类"
+                onPress={handleDelete}
+                disabled={busy}
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  busy && styles.disabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.deleteText}>删除分类</Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
         </View>
         </KeyboardAvoidingView>
@@ -342,7 +387,13 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    archiveText: { fontSize: 14, color: colors.danger },
+    archiveText: { fontSize: 14, color: colors.textSecondary },
+    deleteButton: {
+      height: 42,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteText: { fontSize: 14, color: colors.danger },
     disabled: { opacity: 0.5 },
     pressed: { opacity: 0.75 },
   });

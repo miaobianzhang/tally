@@ -38,6 +38,7 @@ function isCategory(value: unknown): value is CategoryDefinition {
     typeof value.color === 'string' &&
     /^#[0-9a-fA-F]{6}$/.test(value.color) &&
     typeof value.archived === 'boolean' &&
+    (value.deleted === undefined || typeof value.deleted === 'boolean') &&
     typeof value.countsAsFocus === 'boolean' &&
     isNumber(value.order) &&
     isNumber(value.createdAt) &&

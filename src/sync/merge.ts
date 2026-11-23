@@ -79,8 +79,16 @@ function mergeCategories(
   categories.forEach((category, index) => {
     category.order = index;
   });
-  if (!categories.some((category) => !category.archived) && categories[0]) {
-    categories[0].archived = false;
+  if (
+    !categories.some(
+      (category) => !category.archived && !category.deleted,
+    ) &&
+    categories[0]
+  ) {
+    const firstVisible =
+      categories.find((category) => !category.deleted) ?? categories[0];
+    firstVisible.archived = false;
+    firstVisible.deleted = undefined;
   }
   return categories;
 }

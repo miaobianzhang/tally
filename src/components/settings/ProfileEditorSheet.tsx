@@ -4,7 +4,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -150,7 +149,8 @@ export function ProfileEditorSheet({ onClose }: ProfileEditorSheetProps) {
         />
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
+          keyboardVerticalOffset={0}
         >
           <View
             style={[

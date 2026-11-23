@@ -61,7 +61,12 @@ export function SettingsScreen() {
     useTheme();
   const styles = useThemedStyles(createStyles);
   const { profile } = useProfile();
-  const { categories, reloadCategories } = useCategories();
+  const {
+    categories,
+    busy: categoriesBusy,
+    moveCategory,
+    reloadCategories,
+  } = useCategories();
   const {
     sessions,
     lastCategory,
@@ -87,9 +92,12 @@ export function SettingsScreen() {
     sourceUri?: string;
   } | null>(null);
 
-  const active = categories.filter((category) => !category.archived);
-  const archived = categories.filter((category) => category.archived);
-  const orderedCategories = [...active, ...archived];
+  const active = categories.filter(
+    (category) => !category.archived && !category.deleted,
+  );
+  const archived = categories.filter(
+    (category) => category.archived && !category.deleted,
+  );
 
   const handleExport = async (kind: 'json' | 'csv') => {
     if (exporting) return;
@@ -229,6 +237,109 @@ export function SettingsScreen() {
     }
   };
 
+  const handleMoveCategory = async (
+    id: string,
+    direction: -1 | 1,
+  ) => {
+    const moved = await moveCategory(id, direction);
+    if (moved) {
+      hapticSelection();
+    } else {
+      Alert.alert('调整失败', '请稍后重试。');
+    }
+  };
+
+  const renderCategoryRow = (
+    category: CategoryDefinition,
+    order: { index: number; total: number } | null,
+  ) => {
+    const moveUpDisabled =
+      categoriesBusy || order === null || order.index <= 0;
+    const moveDownDisabled =
+      categoriesBusy ||
+      order === null ||
+      order.index >= order.total - 1;
+
+    return (
+      <View key={category.id} style={styles.categoryRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`编辑分类 ${category.label}${category.archived ? '，已停用' : ''}`}
+          onPress={() => setEditingCategory(category)}
+          style={({ pressed }) => [
+            styles.categoryMain,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View
+            style={[styles.colorDot, { backgroundColor: category.color }]}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>{category.label}</Text>
+            <Text style={styles.rowHint}>
+              {category.archived
+                ? '已停用 · 历史记录保留'
+                : category.countsAsFocus
+                  ? '计入专注统计'
+                  : '不参与专注统计'}
+            </Text>
+          </View>
+        </Pressable>
+
+        {order ? (
+          <View style={styles.orderControls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`上移分类 ${category.label}`}
+              accessibilityState={{ disabled: moveUpDisabled }}
+              disabled={moveUpDisabled}
+              onPress={() => {
+                void handleMoveCategory(category.id, -1);
+              }}
+              style={({ pressed }) => [
+                styles.orderButton,
+                pressed && !moveUpDisabled && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.orderText,
+                  moveUpDisabled && styles.orderTextDisabled,
+                ]}
+              >
+                ↑
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`下移分类 ${category.label}`}
+              accessibilityState={{ disabled: moveDownDisabled }}
+              disabled={moveDownDisabled}
+              onPress={() => {
+                void handleMoveCategory(category.id, 1);
+              }}
+              style={({ pressed }) => [
+                styles.orderButton,
+                pressed && !moveDownDisabled && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.orderText,
+                  moveDownDisabled && styles.orderTextDisabled,
+                ]}
+              >
+                ↓
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <Text style={styles.chevron}>›</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView
       style={styles.safe}
@@ -276,34 +387,19 @@ export function SettingsScreen() {
           <Text style={styles.chevron}>›</Text>
         </Pressable>
 
-        <Section title="分类" hint={`${active.length} 个使用中 · ${archived.length} 个已停用`}>
-          {orderedCategories.map((category) => (
-            <Pressable
-              key={category.id}
-              accessibilityRole="button"
-              accessibilityLabel={`编辑分类 ${category.label}${category.archived ? '，已停用' : ''}`}
-              onPress={() => setEditingCategory(category)}
-              style={({ pressed }) => [
-                styles.row,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View
-                style={[styles.colorDot, { backgroundColor: category.color }]}
-              />
-              <View style={styles.rowText}>
-                <Text style={styles.rowTitle}>{category.label}</Text>
-                <Text style={styles.rowHint}>
-                  {category.archived
-                    ? '已停用 · 历史记录保留'
-                    : category.countsAsFocus
-                      ? '计入专注统计'
-                      : '不参与专注统计'}
-                </Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          ))}
+        <Section
+          title="分类"
+          hint={`${active.length} 个使用中 · ${archived.length} 个已停用 · 用 ↑↓ 调整顺序`}
+        >
+          {active.map((category, index) =>
+            renderCategoryRow(category, {
+              index,
+              total: active.length,
+            }),
+          )}
+          {archived.map((category) =>
+            renderCategoryRow(category, null),
+          )}
           <Pressable
             accessibilityRole="button"
             onPress={() => setEditingCategory(null)}
@@ -599,7 +695,7 @@ export function SettingsScreen() {
           </Pressable>
         </Section>
 
-        <Section title="关于" hint="Tally 0.12.0 · 数据保存在本机">
+        <Section title="关于" hint="Tally 0.13.0 · 数据保存在本机">
           <Text style={styles.aboutText}>
             所有记录默认只保存在这台设备。开启坚果云同步后，数据会先加密再上传。
           </Text>
@@ -720,15 +816,42 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
       overflow: 'hidden',
     },
-    row: {
+    categoryRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.md,
       minHeight: 56,
-      paddingHorizontal: spacing.lg,
+      paddingLeft: spacing.lg,
+      paddingRight: spacing.md,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
+    categoryMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      alignSelf: 'stretch',
+      paddingVertical: spacing.sm,
+      paddingRight: spacing.sm,
+    },
+    orderControls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    orderButton: {
+      width: 28,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    orderText: {
+      fontSize: 16,
+      lineHeight: 20,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    orderTextDisabled: { opacity: 0.25 },
     rowText: { flex: 1 },
     rowTitle: { fontSize: 15, color: colors.text },
     rowHint: { marginTop: 2, fontSize: 12, color: colors.muted },

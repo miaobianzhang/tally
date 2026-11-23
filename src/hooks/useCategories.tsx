@@ -51,6 +51,11 @@ interface CategoryContextValue {
   ) => Promise<boolean>;
   archiveCategory: (id: CategoryId) => Promise<boolean>;
   restoreCategory: (id: CategoryId) => Promise<boolean>;
+  deleteCategory: (id: CategoryId) => Promise<boolean>;
+  moveCategory: (
+    id: CategoryId,
+    direction: -1 | 1,
+  ) => Promise<boolean>;
   ensureReferencedCategories: (ids: readonly CategoryId[]) => Promise<void>;
   resolveCategory: (id: CategoryId) => CategoryDefinition;
   reloadCategories: () => Promise<void>;
@@ -240,6 +245,100 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
     [setArchived],
   );
 
+  const deleteCategory = useCallback(
+    async (id: CategoryId) => {
+      if (busyRef.current) return false;
+      const current = categoriesRef.current;
+      const existing = current.find(
+        (category) => category.id === id && !category.deleted,
+      );
+      if (!existing) return false;
+      if (
+        !existing.archived &&
+        current.filter(
+          (category) => !category.archived && !category.deleted,
+        ).length <= 1
+      ) {
+        return false;
+      }
+
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        const now = Date.now();
+        const next = current.map((category) =>
+          category.id === id
+            ? {
+                ...category,
+                archived: true,
+                deleted: true,
+                updatedAt: now,
+              }
+            : category,
+        );
+        return await commit(next);
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [commit],
+  );
+
+  const moveCategory = useCallback(
+    async (id: CategoryId, direction: -1 | 1) => {
+      if (busyRef.current) return false;
+      const current = categoriesRef.current;
+      const active = current
+        .filter(
+          (category) => !category.archived && !category.deleted,
+        )
+        .sort(
+          (a, b) =>
+            a.order - b.order || a.createdAt - b.createdAt,
+        );
+      const index = active.findIndex((category) => category.id === id);
+      if (index < 0) return false;
+      const target = index + direction;
+      if (target < 0 || target >= active.length) return false;
+
+      const reordered = [...active];
+      const [moved] = reordered.splice(index, 1);
+      reordered.splice(target, 0, moved);
+      const archived = current
+        .filter((category) => category.archived && !category.deleted)
+        .sort(
+          (a, b) =>
+            a.order - b.order || a.createdAt - b.createdAt,
+        );
+      const deleted = current
+        .filter((category) => category.deleted)
+        .sort(
+          (a, b) =>
+            a.order - b.order || a.createdAt - b.createdAt,
+        );
+      const now = Date.now();
+      const next = [...reordered, ...archived, ...deleted].map(
+        (category, order) => ({
+          ...category,
+          order,
+          updatedAt:
+            category.order === order ? category.updatedAt : now,
+        }),
+      );
+
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        return await commit(next);
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [commit],
+  );
+
   const ensureReferencedCategories = useCallback(
     async (ids: readonly CategoryId[]) => {
       const current = categoriesRef.current;
@@ -287,6 +386,8 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       updateCategory,
       archiveCategory,
       restoreCategory,
+      deleteCategory,
+      moveCategory,
       ensureReferencedCategories,
       resolveCategory,
       reloadCategories,
@@ -301,6 +402,8 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       updateCategory,
       archiveCategory,
       restoreCategory,
+      deleteCategory,
+      moveCategory,
       ensureReferencedCategories,
       resolveCategory,
       reloadCategories,

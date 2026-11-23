@@ -17,6 +17,7 @@ import {
 } from '../constants/plans';
 import { useDayKey } from '../hooks/useDayKey';
 import { usePlans } from '../hooks/usePlans';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useTally } from '../hooks/useTally';
 import { useTheme } from '../theme/ThemeProvider';
 import { useThemedStyles } from '../theme/useThemedStyles';
@@ -72,6 +73,7 @@ export function PlanScreen() {
     start,
   } = useTally();
   const now = useDayKey();
+  const reduceMotion = useReduceMotion();
 
   const [weekSelection, setWeekSelection] = useState<RangeSelection>({
     kind: 'preset',
@@ -195,6 +197,7 @@ export function PlanScreen() {
         plan={plan}
         now={now}
         busy={plansBusy}
+        reduceMotion={reduceMotion}
         onStart={startPlan}
         onEdit={openEdit}
       />
